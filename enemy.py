@@ -31,8 +31,8 @@ class Enemy:
         # Mantém o inimigo dentro da tela
         self.pos.x = max(self.radius, min(self.pos.x, window_width - self.radius))
         self.pos.y = max(self.radius, min(self.pos.y, window_height - self.radius))
-        # Espelha ao passar da metade da tela
-        self.flipped = self.pos.x > (window_width / 2)
+        # Espelha baseado na posição do player
+        self.flipped = self.pos.x > player_pos.x
 
     def draw(self, window):
         """Desenha o inimigo usando o sprite"""
@@ -87,7 +87,7 @@ class EnemyManager:
                 img.fill(fallback_color)
             return pygame.transform.smoothscale(img, (size, size))
 
-        desired_size = 48
+        desired_size = 80
         self.ghost_sprite = load_and_scale(ghost_path, desired_size, (255, 0, 0))
         self.skell_sprite = load_and_scale(skell_path, desired_size, (0, 255, 0))
 
