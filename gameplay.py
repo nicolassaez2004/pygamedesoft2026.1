@@ -1,11 +1,31 @@
 import pygame
 
+def inicializa():
+    bg = pygame.image.load('sprite/fundodepedra.jpg')
+    plataforma = pygame.image.load('sprite/plataforma.jpg')
 
-def gameplay_loop(window, clock):
-    player_pos = pygame.Vector2(
-        window.get_width() / 2,
-        window.get_height() / 2
-    )
+    player = pygame.image.load('sprite/player.jpg')
+    wizard = pygame.image.load('sprite/wizard.jpg')
+    skeleton = pygame.image.load('sprite/skeleton.jpg')
+    knight = pygame.image.load('sprite/knight.jpg')
+
+    assets = {}
+    assets = ['bg'] = bg
+    assets = ['plataforma'] = plataforma
+    assets = ['player'] = player
+    assets = ['wizard'] = wizard
+    assets = ['skeleton'] = skeleton
+    assets = ['knight'] = knight
+
+    return assets
+
+def desenha(window, assets):
+    window.fill((0, 0, 0))
+    window.blit(assets['bg'], (0, 0))
+    window.blit(assets['player'], (640, 360))
+
+def gameplay_loop(window, clock, player):
+    player_pos = player
 
     dt = 0
 
@@ -29,9 +49,6 @@ def gameplay_loop(window, clock):
             player_pos.x -= 300 * dt
         if keys[pygame.K_d]:
             player_pos.x += 300 * dt
-
-        window.fill((0, 40, 0))
-        pygame.draw.circle(window, (255, 255, 255), player_pos, 40) #trocar pelo sprite do player no futuro
 
         pygame.display.flip()
         dt = clock.tick(60) / 1000
