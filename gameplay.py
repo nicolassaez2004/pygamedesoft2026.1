@@ -2,7 +2,32 @@ import pygame
 import enemy
 import projectile
 
+def inicializa():
+    bg = pygame.image.load('sprite/fundodepedra.jpg')
+    plataforma = pygame.image.load('sprite/plataforma.jpg')
 
+    player = pygame.image.load('sprite/player.jpg')
+    wizard = pygame.image.load('sprite/wizard.jpg')
+    skeleton = pygame.image.load('sprite/skeleton.jpg')
+    knight = pygame.image.load('sprite/knight.jpg')
+
+    assets = {}
+    assets = ['bg'] = bg
+    assets = ['plataforma'] = plataforma
+    assets = ['player'] = player
+    assets = ['wizard'] = wizard
+    assets = ['skeleton'] = skeleton
+    assets = ['knight'] = knight
+
+    return assets
+
+def desenha(window, assets):
+    window.fill((0, 0, 0))
+    window.blit(assets['bg'], (0, 0))
+    window.blit(assets['player'], (640, 360))
+
+def gameplay_loop(window, clock, player):
+    player_pos = player
 def gameplay_loop(window, clock):
     player_pos = pygame.Vector2(
         window.get_width() / 2,
