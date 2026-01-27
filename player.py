@@ -31,6 +31,10 @@ class Player:
         self.hurt_timer = 0
         self.hurt_duration = 0.3  # segundos
         
+        # Congelamento por projéteis
+        self.stun_timer = 0
+        self.stun_duration = 0  # duração do congelamento
+        
         # Ataque melee
         self.attack_timer = 0
         self.attack_duration = 0.42  # Duração mais curta para ataque ficar ágil
@@ -96,24 +100,30 @@ class Player:
         if self.hurt_timer > 0:
             self.hurt_timer -= dt
         
+        # Atualiza timer de congelamento
+        if self.stun_timer > 0:
+            self.stun_timer -= dt
+        
         # Atualiza timer de ataque
         if self.attack_timer > 0:
             self.attack_timer -= dt
         
         # Movimento (pode acontecer em qualquer momento, até durante dano)
+        # Mas não pode se congelado
         is_moving = False
-        if keys[pygame.K_w]:
-            self.pos.y -= self.speed * dt
-            is_moving = True
-        if keys[pygame.K_s]:
-            self.pos.y += self.speed * dt
-            is_moving = True
-        if keys[pygame.K_a]:
-            self.pos.x -= self.speed * dt
-            is_moving = True
-        if keys[pygame.K_d]:
-            self.pos.x += self.speed * dt
-            is_moving = True
+        if self.stun_timer <= 0:  # Só se não estiver congelado
+            if keys[pygame.K_w]:
+                self.pos.y -= self.speed * dt
+                is_moving = True
+            if keys[pygame.K_s]:
+                self.pos.y += self.speed * dt
+                is_moving = True
+            if keys[pygame.K_a]:
+                self.pos.x -= self.speed * dt
+                is_moving = True
+            if keys[pygame.K_d]:
+                self.pos.x += self.speed * dt
+                is_moving = True
         
         # Verifica ataque esquerdo - inicia o ataque
         if mouse_buttons[0]:  # Botão esquerdo
@@ -211,6 +221,11 @@ class Player:
             if self.health <= 0:
                 self.game_over = True
                 self.health = 0
+    
+    def apply_stun(self, stun_duration):
+        """Aplica congelamento ao jogador"""
+        if stun_duration > 0:
+            self.stun_timer = stun_duration
     
     def trigger_attack(self):
         """Inicia o ataque melee"""

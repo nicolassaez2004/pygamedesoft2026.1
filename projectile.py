@@ -5,7 +5,7 @@ import math
 class Projectile:
     """Classe que representa um projétil (player ou inimigo)"""
     
-    def __init__(self, x, y, target_x, target_y, speed=500, color=(255, 255, 0), radius=5, damage=1, image=None):
+    def __init__(self, x, y, target_x, target_y, speed=500, color=(255, 255, 0), radius=5, damage=1, image=None, stun_duration=0):
         self.pos = pygame.Vector2(x, y)
         self.target = pygame.Vector2(target_x, target_y)
         self.speed = speed
@@ -13,6 +13,7 @@ class Projectile:
         self.color = color
         self.damage = damage
         self.image = image  # opcional: sprite do projétil
+        self.stun_duration = stun_duration  # Duração do congelamento causado (0 se não congela)
         
         # Calcula direção
         direction = self.target - self.pos

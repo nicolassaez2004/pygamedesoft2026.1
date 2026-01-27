@@ -85,9 +85,25 @@ class RangedEnemy(Enemy):
 class GhostersonEnemy(Enemy):
     """Inimigo do tipo Ghosterson - imune a projéteis, só leva dano de espada"""
 
-    def __init__(self, x, y, sprite, speed=160, radius=None):
-        super().__init__(x, y, sprite, speed, radius)
+    def __init__(self, x, y, sprite, speed=160, radius=None, scale_factor=1.0, speed_multiplier=1.0):
+        # Aplica o scale_factor ao sprite
+        if scale_factor != 1.0:
+            new_width = int(sprite.get_width() * scale_factor)
+            new_height = int(sprite.get_height() * scale_factor)
+            sprite = pygame.transform.smoothscale(sprite, (new_width, new_height))
+        
+        # Ajusta velocidade
+        adjusted_speed = speed * speed_multiplier
+        
+        super().__init__(x, y, sprite, adjusted_speed, radius)
+        
+        # Ajusta o radius baseado no scale_factor
+        if radius is None:
+            self.radius = int((sprite.get_width() // 2) * scale_factor)
+        
         self.immune_to_projectiles = True  # Só pode ser morto por ataques melee
+        self.scale_factor = scale_factor
+        self.speed_multiplier = speed_multiplier
 
 
 class SkellingtonEnemy(RangedEnemy):
@@ -100,13 +116,26 @@ class SkellingtonEnemy(RangedEnemy):
         if not self.can_shoot():
             return None
 
-        # Radii ajustados para sprite 100x100
+        # Escalação de flechas por dificuldade
+        difficulty_level = max(1.0, self.manager_ref.difficulty)
+        
+        if difficulty_level < 1.3:
+            # Apenas flecha tipo 0 (fraca)
+            arrow_idx = 0
+        elif difficulty_level < 1.6:
+            # Pode usar tipo 0 ou 1 (chance de tipo forte)
+            arrow_idx = random.choice([0, 0, 1])  # 2/3 fraca, 1/3 média
+        else:
+            # Todos os tipos disponíveis
+            arrow_idx = random.randint(0, 2)
+        
+        # Definição com escalação
         arrow_types = [
-            {"sprite": 0, "speed": 520, "damage": 1, "radius": 18},
-            {"sprite": 1, "speed": 560, "damage": 1, "radius": 18},
-            {"sprite": 2, "speed": 500, "damage": 2, "radius": 20},
+            {"sprite": 0, "speed": 315, "damage": 1, "radius": 18, "stun": 0},  # Flecha 1: 1 dano, -25%
+            {"sprite": 1, "speed": 428, "damage": 2, "radius": 18, "stun": 0},  # Flecha 2: 2 dano, -5%
+            {"sprite": 2, "speed": 460, "damage": 1, "radius": 20, "stun": 0.5},  # Flecha 3: 1 dano, congela 0.5s, +15%
         ]
-        choice = random.choice(arrow_types)
+        choice = arrow_types[arrow_idx]
         self.reset_cooldown()
         return projectile.Projectile(
             self.pos.x,
@@ -117,7 +146,8 @@ class SkellingtonEnemy(RangedEnemy):
             color=(255, 255, 255),
             radius=choice["radius"],
             damage=choice["damage"],
-            image=self.manager_ref.arrow_sprites[choice["sprite"]]
+            image=self.manager_ref.arrow_sprites[choice["sprite"]],
+            stun_duration=choice["stun"]
         )
 
 
@@ -132,13 +162,26 @@ class MageEnemy(RangedEnemy):
         if not self.can_shoot():
             return None
 
-        # Radii ajustados para sprite 100x100
+        # Escalação de magias por dificuldade
+        difficulty_level = max(1.0, self.manager_ref.difficulty)
+        
+        if difficulty_level < 1.3:
+            # Apenas magia tipo 0 (fraca)
+            spell_idx = 0
+        elif difficulty_level < 1.6:
+            # Pode usar tipo 0 ou 1
+            spell_idx = random.choice([0, 0, 1])  # 2/3 fraca, 1/3 média
+        else:
+            # Todos os tipos disponíveis
+            spell_idx = random.randint(0, 2)
+        
+        # Definição com escalação
         spells = [
-            {"sprite": 0, "speed": 420, "damage": 2, "radius": 20},
-            {"sprite": 1, "speed": 480, "damage": 1, "radius": 18},
-            {"sprite": 2, "speed": 380, "damage": 3, "radius": 22},
+            {"sprite": 0, "speed": 255, "damage": 1, "radius": 16, "stun": 0},  # Magia 1: 1 dano,
+            {"sprite": 1, "speed": 355, "damage": 2, "radius": 17, "stun": 0},  # Magia 2: 2 dano
+            {"sprite": 2, "speed": 455, "damage": 1, "radius": 18, "stun": 0.5},  # Magia 3: 1 dano, congela 0.5s, +15%
         ]
-        choice = random.choice(spells)
+        choice = spells[spell_idx]
         self.reset_cooldown()
         return projectile.Projectile(
             self.pos.x,
@@ -149,7 +192,8 @@ class MageEnemy(RangedEnemy):
             color=(255, 255, 255),
             radius=choice["radius"],
             damage=choice["damage"],
-            image=self.manager_ref.magic_sprites[choice["sprite"]]
+            image=self.manager_ref.magic_sprites[choice["sprite"]],
+            stun_duration=choice["stun"]
         )
 
 
@@ -195,8 +239,8 @@ class EnemyManager:
         self.magic_sprites = [load_and_scale(p, proj_size, (255, 0, 255)) for p in magic_paths]
 
         self.spawn_timer = 0
-        self.spawn_interval = 1.0  # segundos entre spawns
-        self.max_enemies = 5
+        self.spawn_interval = 2.0  # segundos entre spawns (aumentado para começar mais fácil)
+        self.max_enemies = 3  # reduzido de 5 para 3
         self.difficulty = 1.0  # multiplicador de dificuldade
         self.enemy_projectiles = []
 
@@ -221,12 +265,21 @@ class EnemyManager:
         enemy_type = random.choice(['ghost', 'skell', 'mage'])
 
         # Variação leve de velocidade por spawn para aleatoriedade
-        base_speed = 150 * self.difficulty
-        speed_variation = random.uniform(0.9, 1.2)
+        base_speed = 120 * self.difficulty 
+        speed_variation = random.uniform(0.8, 1.1)  # Reduzido o range de variação
         speed = base_speed * speed_variation
 
         if enemy_type == 'ghost':
-            enemy_obj = GhostersonEnemy(x, y, sprite=self.ghost_sprite, speed=speed)
+            # Fantasma com tamanho variável (0.4 a 1.0) e velocidade variável (1.0 a 1.4)
+            ghost_scale = random.uniform(0.4, 1.0)
+            ghost_speed_mult = random.uniform(1.0, 1.4)
+            enemy_obj = GhostersonEnemy(
+                x, y, 
+                sprite=self.ghost_sprite, 
+                speed=speed,
+                scale_factor=ghost_scale,
+                speed_multiplier=ghost_speed_mult
+            )
         elif enemy_type == 'mage':
             enemy_obj = MageEnemy(x, y, sprite=self.mage_sprite, speed=speed)
         else:
@@ -269,15 +322,15 @@ class EnemyManager:
             proj.draw(window)
 
     def check_collisions_with_player(self, player_pos, player_radius):
-        """Verifica colisões com o player, retorna inimigo que colidiu ou None"""
+        """Verifica colisões com o player, retorna tupla (tipo, objeto) ou None"""
         for enemy in self.enemies[:]:
             if enemy.is_colliding_with_player(player_pos, player_radius):
-                return enemy
+                return ('enemy', enemy)
         # Checa projéteis inimigos
         for proj in self.enemy_projectiles[:]:
             if proj.is_colliding_with_enemy(player_pos, player_radius):
                 self.enemy_projectiles.remove(proj)
-                return 'projectile'  # Retorna string para indicar que foi projétil
+                return ('projectile', proj)  # Retorna projétil para aplicar stun
         return None
 
     def remove_enemy(self, enemy):

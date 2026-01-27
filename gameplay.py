@@ -124,12 +124,20 @@ def gameplay_loop(window, clock):
             enemy_manager.increase_difficulty(score)
 
             # Verifica colisão com inimigos (dano no jogador)
-            colliding_enemy = enemy_manager.check_collisions_with_player(player_obj.pos, player_obj.radius)
-            if colliding_enemy:
-                player_obj.take_damage(1)
-                # Se for um fantasma (GhostersonEnemy), remove-o após causar dano
-                if colliding_enemy != 'projectile' and isinstance(colliding_enemy, enemy.GhostersonEnemy):
-                    enemy_manager.remove_enemy(colliding_enemy)
+            collision_result = enemy_manager.check_collisions_with_player(player_obj.pos, player_obj.radius)
+            if collision_result:
+                collision_type, collision_obj = collision_result
+                if collision_type == 'enemy':
+                    player_obj.take_damage(1)
+                    # Se for um fantasma (GhostersonEnemy), remove-o após causar dano
+                    if isinstance(collision_obj, enemy.GhostersonEnemy):
+                        enemy_manager.remove_enemy(collision_obj)
+                elif collision_type == 'projectile':
+                    # Projétil acertou o jogador
+                    player_obj.take_damage(collision_obj.damage)
+                    # Aplica congelamento se o projétil tiver stun
+                    if collision_obj.stun_duration > 0:
+                        player_obj.apply_stun(collision_obj.stun_duration)
 
         # Desenha o jogo
         window.blit(assets['bg'], (0, 0))
@@ -160,11 +168,16 @@ def gameplay_loop(window, clock):
         health_text = font_hud.render(f"Health: {player_obj.health}/{player_obj.max_health}", True, (0, 255, 0))
         state_text = font_hud.render(f"State: {player_obj.state}", True, (200, 200, 255))
         
+        # Texto de congelamento se estiver ativo
+        stun_color = (0, 255, 255) if player_obj.stun_timer > 0 else (200, 200, 200)
+        stun_text = font_hud.render(f"Stun: {player_obj.stun_timer:.2f}s" if player_obj.stun_timer > 0 else "Stun: Ready", True, stun_color)
+        
         window.blit(score_text, (10, 10))
         window.blit(ammo_text, (10, 50))
         window.blit(enemies_text, (10, 90))
         window.blit(health_text, (10, 130))
         window.blit(state_text, (10, 170))
+        window.blit(stun_text, (10, 210))
         
         # Desenha status de game over
         if player_obj.game_over:
