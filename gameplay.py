@@ -25,6 +25,23 @@ def inicializa(window_width=1280, window_height=720):
     assets['wizard'] = wizard
     assets['skeleton'] = skeleton
     assets['knight'] = knight
+    
+    # Carrega sons
+    try:
+        assets['som_flecha_acerto'] = pygame.mixer.Sound('sons/FlechaAcertando.mp3')
+        assets['som_attack1'] = pygame.mixer.Sound('sons/Attack1Espada.mp3')
+        assets['som_stun'] = pygame.mixer.Sound('sons/StunGeloIce.mp3')
+        assets['som_dano'] = pygame.mixer.Sound('sons/TomouDanoPerdeuVida.mp3')
+        assets['som_fantasma_morre'] = pygame.mixer.Sound('sons/fantasmamorrendo.mp3')
+        assets['som_fantasma_morre'].set_volume(0.15)  # Reduz volume para 15%
+    except Exception as e:
+        print(f"Aviso: Não foi possível carregar alguns sons: {e}")
+        # Cria sons vazios para evitar erros se os arquivos não existirem
+        assets['som_flecha_acerto'] = None
+        assets['som_attack1'] = None
+        assets['som_stun'] = None
+        assets['som_dano'] = None
+        assets['som_fantasma_morre'] = None
 
     return assets
 
@@ -88,6 +105,9 @@ def gameplay_loop(window, clock):
             attack_melee = player_obj.get_melee_attack()
             if attack_melee:
                 current_melee_attack = attack_melee
+                # Toca som de ataque
+                if assets['som_attack1']:
+                    assets['som_attack1'].play()
             
             # Ataque direito (bola amarela - como o arco)
             attack_cooldown_right -= dt
@@ -107,6 +127,9 @@ def gameplay_loop(window, clock):
                 for enemy_obj in enemy_manager.get_all_enemies():
                     if current_melee_attack.is_colliding_with_enemy(enemy_obj.pos, enemy_obj.radius):
                         if enemy_obj.take_damage(current_melee_attack.damage):
+                            # Toca som se for fantasma
+                            if isinstance(enemy_obj, enemy.GhostersonEnemy) and assets['som_fantasma_morre']:
+                                assets['som_fantasma_morre'].play()
                             enemy_manager.remove_enemy(enemy_obj)
                             score += 100
                 current_melee_attack = None  # Remove o ataque após checar colisão
@@ -119,6 +142,9 @@ def gameplay_loop(window, clock):
                     if hit_enemy.take_damage(proj.damage):
                         enemy_manager.remove_enemy(hit_enemy)
                         score += 100
+                    # Toca som de acerto
+                    if assets['som_flecha_acerto']:
+                        assets['som_flecha_acerto'].play()
             
             # Aumenta dificuldade conforme score
             enemy_manager.increase_difficulty(score)
@@ -129,15 +155,27 @@ def gameplay_loop(window, clock):
                 collision_type, collision_obj = collision_result
                 if collision_type == 'enemy':
                     player_obj.take_damage(1)
+                    # Toca som de dano
+                    if assets['som_dano']:
+                        assets['som_dano'].play()
                     # Se for um fantasma (GhostersonEnemy), remove-o após causar dano
                     if isinstance(collision_obj, enemy.GhostersonEnemy):
+                        # Toca som de fantasma morrendo
+                        if assets['som_fantasma_morre']:
+                            assets['som_fantasma_morre'].play()
                         enemy_manager.remove_enemy(collision_obj)
                 elif collision_type == 'projectile':
                     # Projétil acertou o jogador
                     player_obj.take_damage(collision_obj.damage)
+                    # Toca som de dano
+                    if assets['som_dano']:
+                        assets['som_dano'].play()
                     # Aplica congelamento se o projétil tiver stun
                     if collision_obj.stun_duration > 0:
                         player_obj.apply_stun(collision_obj.stun_duration)
+                        # Toca som de stun
+                        if assets['som_stun']:
+                            assets['som_stun'].play()
 
         # Desenha o jogo
         window.blit(assets['bg'], (0, 0))
