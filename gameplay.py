@@ -5,14 +5,14 @@ import projectile
 def inicializa(window_width=1280, window_height=720):
     bg = pygame.image.load('sprite/fundodepedra.jpg')
     bg = pygame.transform.scale(bg, (window_width, window_height))
-    plataforma = pygame.image.load('sprite/plataforma.png')
+    plataforma = pygame.image.load('sprite/mapa.jpg')
     plataforma = pygame.transform.scale(plataforma, (480, 400))
 
     player = pygame.image.load('sprite/player.jpg')
     player = pygame.transform.scale(player, (80, 80))
-    wizard = pygame.image.load('sprite/wizard.jpg')
+    wizard = pygame.image.load('Sprites/MageMicoz.png')
     wizard = pygame.transform.scale(wizard, (80, 80))
-    skeleton = pygame.image.load('sprite/skeleton.jpg')
+    skeleton = pygame.image.load('Sprites/Skellington_gerson.png')
     skeleton = pygame.transform.scale(skeleton, (80, 80))
     knight = pygame.image.load('sprite/knight.jpg')
     knight = pygame.transform.scale(knight, (80, 80))

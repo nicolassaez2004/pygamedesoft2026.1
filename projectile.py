@@ -3,15 +3,16 @@ import math
 
 
 class Projectile:
-    """Classe que representa um projétil disparado pelo arco"""
+    """Classe que representa um projétil (player ou inimigo)"""
     
-    def __init__(self, x, y, target_x, target_y, speed=500):
+    def __init__(self, x, y, target_x, target_y, speed=500, color=(255, 255, 0), radius=5, damage=1, image=None):
         self.pos = pygame.Vector2(x, y)
         self.target = pygame.Vector2(target_x, target_y)
         self.speed = speed
-        self.radius = 5
-        self.color = (255, 255, 0)
-        self.damage = 1
+        self.radius = radius
+        self.color = color
+        self.damage = damage
+        self.image = image  # opcional: sprite do projétil
         
         # Calcula direção
         direction = self.target - self.pos
@@ -25,8 +26,14 @@ class Projectile:
         self.pos += self.velocity * dt
     
     def draw(self, window):
-        """Desenha o projétil"""
-        pygame.draw.circle(window, self.color, self.pos, self.radius)
+        """Desenha o projétil (sprite se existir, círculo se não)"""
+        if self.image is not None:
+            angle = -math.degrees(math.atan2(self.velocity.y, self.velocity.x)) if self.velocity.length() > 0 else 0
+            rotated = pygame.transform.rotate(self.image, angle)
+            rect = rotated.get_rect(center=(self.pos.x, self.pos.y))
+            window.blit(rotated, rect)
+        else:
+            pygame.draw.circle(window, self.color, self.pos, self.radius)
     
     def is_out_of_bounds(self, window_width, window_height, margin=50):
         """Verifica se o projétil saiu da tela"""
@@ -70,7 +77,11 @@ class Bow:
                 self.player_pos.x,
                 self.player_pos.y,
                 target_x,
-                target_y
+                target_y,
+                speed=500,
+                color=(255, 255, 0),
+                radius=5,
+                damage=1
             )
             self.projectiles.append(projectile)
             self.ammo -= 1
