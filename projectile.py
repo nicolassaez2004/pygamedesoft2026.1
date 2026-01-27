@@ -110,12 +110,16 @@ class Bow:
         for projectile in self.projectiles[:]:
             for enemy in enemies:
                 if projectile.is_colliding_with_enemy(enemy.pos, enemy.radius):
+                    # Verifica se o inimigo é imune a projéteis (como fantasma)
+                    is_immune = hasattr(enemy, 'immune_to_projectiles') and enemy.immune_to_projectiles
+                    
                     if projectile not in [p for p, _ in hit_enemies]:
                         hit_enemies.append((projectile, enemy))
-                        # Remove o projétil após atingir
-                        if projectile in self.projectiles:
+                        
+                        # Remove o projétil apenas se acertar inimigo NÃO imune
+                        if not is_immune and projectile in self.projectiles:
                             self.projectiles.remove(projectile)
-                        break
+                            break
         
         return hit_enemies
     

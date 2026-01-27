@@ -51,6 +51,11 @@ def gameplay_loop(window, clock):
     attack_cooldown_right = 0
     attack_cooldown_duration = 0.3
     current_melee_attack = None  # Ataque melee ativo
+    
+    # Sistema de pontuação por tempo
+    time_score_timer = 0
+    time_score_interval = 2.0  # A cada 2 segundos ganha pontos
+    time_score_amount = 10  # Pontos ganhos por intervalo
 
     while True:
         for event in pygame.event.get():
@@ -67,6 +72,12 @@ def gameplay_loop(window, clock):
         player_obj.update(dt, keys, mouse_buttons)
         
         if not player_obj.game_over:
+            # Sistema de pontuação por tempo
+            time_score_timer += dt
+            if time_score_timer >= time_score_interval:
+                score += time_score_amount
+                time_score_timer = 0
+            
             # Aplicar colisão com a plataforma
             plataforma_x = (window.get_width() - 480) // 2
             plataforma_y = (window.get_height() - 400) // 2
@@ -103,16 +114,22 @@ def gameplay_loop(window, clock):
             # Verifica colisão de projéteis (ataque direito) com inimigos
             hit_enemies = bow_left.check_collisions_with_enemies(enemy_manager.get_all_enemies())
             for proj, hit_enemy in hit_enemies:
-                if hit_enemy.take_damage(proj.damage):
-                    enemy_manager.remove_enemy(hit_enemy)
-                    score += 100
+                # Verifica se o inimigo é imune a projéteis (como o fantasma)
+                if not hasattr(hit_enemy, 'immune_to_projectiles') or not hit_enemy.immune_to_projectiles:
+                    if hit_enemy.take_damage(proj.damage):
+                        enemy_manager.remove_enemy(hit_enemy)
+                        score += 100
             
             # Aumenta dificuldade conforme score
             enemy_manager.increase_difficulty(score)
 
             # Verifica colisão com inimigos (dano no jogador)
-            if enemy_manager.check_collisions_with_player(player_obj.pos, player_obj.radius):
+            colliding_enemy = enemy_manager.check_collisions_with_player(player_obj.pos, player_obj.radius)
+            if colliding_enemy:
                 player_obj.take_damage(1)
+                # Se for um fantasma (GhostersonEnemy), remove-o após causar dano
+                if colliding_enemy != 'projectile' and isinstance(colliding_enemy, enemy.GhostersonEnemy):
+                    enemy_manager.remove_enemy(colliding_enemy)
 
         # Desenha o jogo
         window.blit(assets['bg'], (0, 0))

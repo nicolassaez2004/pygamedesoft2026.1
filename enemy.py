@@ -83,10 +83,11 @@ class RangedEnemy(Enemy):
 
 
 class GhostersonEnemy(Enemy):
-    """Inimigo do tipo Ghosterson"""
+    """Inimigo do tipo Ghosterson - imune a projéteis, só leva dano de espada"""
 
     def __init__(self, x, y, sprite, speed=160, radius=None):
         super().__init__(x, y, sprite, speed, radius)
+        self.immune_to_projectiles = True  # Só pode ser morto por ataques melee
 
 
 class SkellingtonEnemy(RangedEnemy):
@@ -268,16 +269,16 @@ class EnemyManager:
             proj.draw(window)
 
     def check_collisions_with_player(self, player_pos, player_radius):
-        """Verifica colisões com o player, retorna True se há colisão"""
-        for enemy in self.enemies:
+        """Verifica colisões com o player, retorna inimigo que colidiu ou None"""
+        for enemy in self.enemies[:]:
             if enemy.is_colliding_with_player(player_pos, player_radius):
-                return True
+                return enemy
         # Checa projéteis inimigos
         for proj in self.enemy_projectiles[:]:
             if proj.is_colliding_with_enemy(player_pos, player_radius):
                 self.enemy_projectiles.remove(proj)
-                return True
-        return False
+                return 'projectile'  # Retorna string para indicar que foi projétil
+        return None
 
     def remove_enemy(self, enemy):
         """Remove um inimigo da lista"""
@@ -290,9 +291,12 @@ class EnemyManager:
 
     def increase_difficulty(self, score):
         """Aumenta a dificuldade baseado no score"""
-        self.difficulty = 1.0 + (score // 1000) * 0.1
-        self.max_enemies = 5 + (score // 2000)
-        self.spawn_interval = max(0.5, 1.0 - (score // 5000) * 0.1)
+        # A cada 500 pontos, aumenta a velocidade em 15%
+        self.difficulty = 1.0 + (score // 500) * 0.15
+        # A cada 1000 pontos, adiciona mais 1 inimigo (máximo)
+        self.max_enemies = 5 + (score // 1000)
+        # A cada 2000 pontos, reduz o tempo entre spawns
+        self.spawn_interval = max(0.3, 1.0 - (score // 2000) * 0.15)
 
     def clear(self):
         """Limpa todos os inimigos"""
