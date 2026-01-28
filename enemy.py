@@ -299,6 +299,12 @@ class EnemyManager:
         # Tipo aleatório de inimigo (inclui mago)
         enemy_type = random.choice(['ghost', 'skell', 'mage'])
 
+        # Garantir que exista pelo menos um Ghosterson quando possível:
+        # se atualmente não há nenhum Ghosterson e ainda há espaço para spawn
+        # dentro do limite `max_enemies`, forçamos o próximo spawn a ser 'ghost'.
+        if not any(isinstance(e, GhostersonEnemy) for e in self.enemies):
+            enemy_type = 'ghost'
+
         # Variação leve de velocidade por spawn para aleatoriedade
         base_speed = 120 * self.difficulty 
         speed_variation = random.uniform(0.8, 1.1)  # Reduzido o range de variação

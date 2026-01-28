@@ -47,7 +47,7 @@ class Player:
         self.pos = pygame.Vector2(x, y)
         self.window_width = window_width
         self.window_height = window_height
-        self.radius = 41
+        self.radius = 40
         self.speed = 300
         self.max_health = 5
         self.health = 5
@@ -144,8 +144,8 @@ class Player:
                             )
                             # Copia para evitar problemas com subsurfaces
                             frame = frame.copy()
-                            # Redimensiona para 225x225
-                            frame = pygame.transform.scale(frame, (225, 225))
+                            # Redimensiona para 80x80
+                            frame = pygame.transform.scale(frame, (80, 80))
                             frames.append(frame)
                         except ValueError as e:
                             print(f"  Erro ao extrair frame ({col}, {row}): {e}")
@@ -187,10 +187,10 @@ class Player:
             asset_key = f"{state}_{self.weapon}"
             if asset_key in assets:
                 img = assets[asset_key].copy()
-                img = pygame.transform.scale(img, (225, 225))
+                img = pygame.transform.scale(img, (80, 80))
                 return img
             # Fallback
-            dummy = pygame.Surface((225, 225))
+            dummy = pygame.Surface((80, 80))
             dummy.fill((100, 100, 100))
             return dummy
         
@@ -199,18 +199,18 @@ class Player:
         
         if asset_key in assets:
             img = assets[asset_key].copy()
-            img = pygame.transform.scale(img, (225, 225))
+            img = pygame.transform.scale(img, (80, 80))
             return img
         
         # Se não encontrar, tenta sem arma
         asset_key_fallback = f"{state_prefix}_nada"
         if asset_key_fallback in assets:
             img = assets[asset_key_fallback].copy()
-            img = pygame.transform.scale(img, (225, 225))
+            img = pygame.transform.scale(img, (80, 80))
             return img
         
         # Fallback final
-        dummy = pygame.Surface((225, 225))
+        dummy = pygame.Surface((80, 80))
         dummy.fill((100, 100, 100))
         return dummy
     

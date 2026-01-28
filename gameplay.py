@@ -295,10 +295,14 @@ def gameplay_loop(window, clock):
             # Variáveis de interação com itens
             near_bausprite = False
             near_kitmedico = False
-            bausprite_cost = 15  # Custo para comprar munição
-            munition_recovery = 10  # Munição recuperada por compra
+            near_espadasprite = False
+            near_arco = False
+            bausprite_cost = 2  # Custo para comprar munição
+            munition_recovery = 3  # Munição recuperada por compra
             kitmedico_cost = 20  # Custo para usar o kit médico
             kitmedico_recovery = 1  # Vida recuperada (sempre 1)
+            espadasprite_cost = 4  # Preço da espada atualizado
+            arco_cost = 6  # Preço do arco
             
             # Verifica colisão com bausprite
             bausprite_rect = assets['bausprite'].get_rect(topleft=(440, 200))
@@ -325,26 +329,25 @@ def gameplay_loop(window, clock):
                     purchase_cooldown = purchase_cooldown_duration  # Ativa cooldown
             arco_rect = assets['arco'].get_rect(topleft=(440, 440))
             if arco_rect.colliderect(player_rect):
-                pass
+                has_bow = player_obj.weapon in ['arco', 'espada_arco']
+                if not has_bow:
+                    near_arco = True
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_e] and money >= arco_cost and purchase_cooldown <= 0:
+                        money -= arco_cost
+                        player_obj.set_weapon('arco')
+                        purchase_cooldown = purchase_cooldown_duration
 
             espadasprite_rect = assets['espadasprite'].get_rect(topleft=(760, 440))
             if espadasprite_rect.colliderect(player_rect):
                 # Verifica se tem uma espada
                 has_sword = player_obj.weapon in ['espada', 'espada_arco']
                 if not has_sword:
-                    prompt_text = f'Pressione "E" para comprar Espada (5$)'
-                    if money >= 5:
-                        prompt_color = (100, 255, 100)  # Verde
-                    else:
-                        prompt_color = (255, 100, 100)  # Vermelho
-                    prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
-                    prompt_x = 640 - prompt_surface.get_width() // 2
-                    window.blit(prompt_surface, (prompt_x, 600))
-                    
+                    near_espadasprite = True
                     # Verifica se pressionou E para comprar
                     keys = pygame.key.get_pressed()
-                    if keys[pygame.K_e] and money >= 5 and purchase_cooldown <= 0:
-                        money -= 5
+                    if keys[pygame.K_e] and money >= espadasprite_cost and purchase_cooldown <= 0:
+                        money -= espadasprite_cost
                         player_obj.set_weapon('espada')
                         purchase_cooldown = purchase_cooldown_duration
 
@@ -436,15 +439,39 @@ def gameplay_loop(window, clock):
             window.blit(prompt_surface, (prompt_x, 600))
         
         if near_kitmedico:
+            # Sempre mostrar o prompt quando próximo; ajustar mensagem se a vida já estiver cheia
             if player_obj.health < player_obj.max_health:
                 prompt_text = f'Pressione "E" para recuperar {kitmedico_recovery} vida ({kitmedico_cost}$)'
                 if money >= kitmedico_cost:
                     prompt_color = (100, 200, 255)
                 else:
                     prompt_color = (255, 100, 100)  # Vermelho (sem dinheiro)
-                prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
-                prompt_x = 640 - prompt_surface.get_width() // 2
-                window.blit(prompt_surface, (prompt_x, 600))
+            else:
+                prompt_text = 'Vida cheia'
+                prompt_color = (180, 180, 180)
+            prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+            prompt_x = 640 - prompt_surface.get_width() // 2
+            window.blit(prompt_surface, (prompt_x, 600))
+
+        if near_espadasprite:
+            prompt_text = f'Pressione "E" para comprar Espada ({espadasprite_cost}$)'
+            if money >= espadasprite_cost:
+                prompt_color = (100, 255, 100)
+            else:
+                prompt_color = (255, 100, 100)
+            prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+            prompt_x = 640 - prompt_surface.get_width() // 2
+            window.blit(prompt_surface, (prompt_x, 600))
+        
+        if near_arco:
+            prompt_text = f'Pressione "E" para comprar Arco ({arco_cost}$)'
+            if money >= arco_cost:
+                prompt_color = (100, 255, 100)
+            else:
+                prompt_color = (255, 100, 100)
+            prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+            prompt_x = 640 - prompt_surface.get_width() // 2
+            window.blit(prompt_surface, (prompt_x, 600))
         
         # Desenha HUD melhorado
         draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time, money)
