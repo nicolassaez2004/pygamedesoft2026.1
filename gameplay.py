@@ -17,6 +17,14 @@ def inicializa(window_width=1280, window_height=720):
     skeleton = pygame.transform.scale(skeleton, (80, 80))
     knight = pygame.image.load('sprite/knight.jpg')
     knight = pygame.transform.scale(knight, (80, 80))
+    bausprite = pygame.image.load('sprite/bausprite.png')
+    bausprite = pygame.transform.scale(bausprite, (80, 80))
+    kitmedico = pygame.image.load('sprite/kitmedicosprite.png')
+    kitmedico = pygame.transform.scale(kitmedico, (80, 80))
+    arco = pygame.image.load('sprite/arco.png')
+    arco = pygame.transform.scale(arco, (80, 80))
+    espadasprite = pygame.image.load('sprite/espadasprite.png')
+    espadasprite = pygame.transform.scale(espadasprite, (80, 80))
 
     assets = {}
     assets['bg'] = bg
@@ -25,6 +33,10 @@ def inicializa(window_width=1280, window_height=720):
     assets['wizard'] = wizard
     assets['skeleton'] = skeleton
     assets['knight'] = knight
+    assets['bausprite'] = bausprite
+    assets['kitmedico'] = kitmedico
+    assets['arco'] = arco
+    assets['espadasprite'] = espadasprite
     
     # Carrega sons
     try:
@@ -148,6 +160,26 @@ def gameplay_loop(window, clock):
             
             # Aumenta dificuldade conforme score
             enemy_manager.increase_difficulty(score)
+            
+            # Verifica colisão com bausprite
+            bausprite_rect = assets['bausprite'].get_rect(topleft=(440, 200))
+            player_rect = pygame.Rect(player_obj.pos[0] - player_obj.radius, player_obj.pos[1] - player_obj.radius, player_obj.radius * 2, player_obj.radius * 2)
+            if bausprite_rect.colliderect(player_rect):
+                # Colisão com bausprite - pode adicionar lógica (coleta, etc)
+                pass
+            
+            # Verifica colisão com kitmedico
+            kitmedico_rect = assets['kitmedico'].get_rect(topleft=(760, 200))
+            if kitmedico_rect.colliderect(player_rect):
+                # Colisão com kitmedico - pode adicionar lógica (cura, etc)
+                pass
+            arco_rect = assets['arco'].get_rect(topleft=(440, 440))
+            if arco_rect.colliderect(player_rect):
+                pass
+
+            espadasprite_rect = assets['espadasprite'].get_rect(topleft=(760, 440))
+            if espadasprite_rect.colliderect(player_rect):
+                pass
 
             # Verifica colisão com inimigos (dano no jogador)
             collision_result = enemy_manager.check_collisions_with_player(player_obj.pos, player_obj.radius)
@@ -184,6 +216,16 @@ def gameplay_loop(window, clock):
         plataforma_x = (window.get_width() - 480) // 2
         plataforma_y = (window.get_height() - 400) // 2
         window.blit(assets['plataforma'], (plataforma_x, plataforma_y))
+        
+        # Desenha bausprite na posição especificada (antes do jogador)
+        window.blit(assets['bausprite'], (440, 200))
+        
+        # Desenha kitmedico na posição especificada
+        window.blit(assets['kitmedico'], (760, 200))
+
+        window.blit(assets['arco'], (440, 440))
+
+        window.blit(assets['espadasprite'], (760, 440))
         
         # Desenha o player
         player_obj.draw(window)
