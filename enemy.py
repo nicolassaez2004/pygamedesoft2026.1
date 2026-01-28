@@ -143,18 +143,28 @@ class SkellingtonEnemy(RangedEnemy):
             {"sprite": 2, "speed": 460, "damage": 1, "radius": 20, "stun": 0.5},  # Flecha 3: 1 dano, congela 0.5s, +15%
         ]
         choice = arrow_types[arrow_idx]
+        
+        # Calcula velocidade escalada (apos 2 minutos)
+        scaled_speed = self.manager_ref.get_scaled_projectile_speed(choice["speed"])
+        
+        # Calcula congelamento escalado (apenas para Flecha 3)
+        if arrow_idx == 2:  # Apenas Flecha 3 congela
+            scaled_stun = self.manager_ref.get_scaled_stun_duration(choice["stun"])
+        else:
+            scaled_stun = choice["stun"]
+        
         self.reset_cooldown()
         return projectile.Projectile(
             self.pos.x,
             self.pos.y,
             player_pos.x,
             player_pos.y,
-            speed=choice["speed"],
+            speed=scaled_speed,
             color=(255, 255, 255),
             radius=choice["radius"],
             damage=choice["damage"],
             image=self.manager_ref.arrow_sprites[choice["sprite"]],
-            stun_duration=choice["stun"]
+            stun_duration=scaled_stun
         )
 
 
@@ -195,18 +205,28 @@ class MageEnemy(RangedEnemy):
             {"sprite": 2, "speed": 455, "damage": 1, "radius": 18, "stun": 0.5},  # Magia 3: 1 dano, congela 0.5s, +15%
         ]
         choice = spells[spell_idx]
+        
+        # Calcula velocidade escalada (apos 2 minutos)
+        scaled_speed = self.manager_ref.get_scaled_projectile_speed(choice["speed"])
+        
+        # Calcula congelamento escalado (apenas para Magia 3)
+        if spell_idx == 2:  # Apenas Magia 3 congela
+            scaled_stun = self.manager_ref.get_scaled_stun_duration(choice["stun"])
+        else:
+            scaled_stun = choice["stun"]
+        
         self.reset_cooldown()
         return projectile.Projectile(
             self.pos.x,
             self.pos.y,
             player_pos.x,
             player_pos.y,
-            speed=choice["speed"],
+            speed=scaled_speed,
             color=(255, 255, 255),
             radius=choice["radius"],
             damage=choice["damage"],
             image=self.manager_ref.magic_sprites[choice["sprite"]],
-            stun_duration=choice["stun"]
+            stun_duration=scaled_stun
         )
 
 
@@ -257,6 +277,7 @@ class EnemyManager:
         self.difficulty = 1.0  # multiplicador de dificuldade
         self.enemy_projectiles = []
         self.current_score = 0  # Rastreia o score para ajustar dificuldade
+        self.elapsed_time = 0  # Rastreia tempo decorrido para scaling de velocidade
 
     def spawn_enemy(self):
         """Spawna um novo inimigo em um local aleatório nas bordas e tipo aleatório"""
@@ -303,8 +324,11 @@ class EnemyManager:
         enemy_obj.manager_ref = self
         self.enemies.append(enemy_obj)
 
-    def update(self, dt, player_pos):
+    def update(self, dt, player_pos, elapsed_time):
         """Atualiza todos os inimigos"""
+        # Atualiza tempo decorrido para escalação de dificuldade
+        self.elapsed_time = elapsed_time
+        
         # Spawna novos inimigos se houver espaço
         self.spawn_timer += dt
         if self.spawn_timer >= self.spawn_interval and len(self.enemies) < self.max_enemies:
@@ -375,6 +399,35 @@ class EnemyManager:
         
         # Spawn interval reduz bem lentamente
         self.spawn_interval = max(0.8, 2.0 - (score / 10000.0))
+    
+    def get_scaled_projectile_speed(self, base_speed):
+        """Calcula velocidade do projétil baseado no tempo decorrido (a partir de 2 minutos)"""
+        time_after_2min = max(0, self.elapsed_time - 120)  # 120 segundos = 2 minutos
+        
+        if time_after_2min <= 0:
+            return base_speed
+        
+        # A cada segundo após 2 minutos, aumenta 2% de velocidade
+        speed_multiplier = 1.0 + (time_after_2min * 0.02)
+        return int(base_speed * speed_multiplier)
+    
+    def get_scaled_stun_duration(self, base_stun):
+        """Calcula duração do congelamento baseado no tempo decorrido (a partir de 2 minutos)"""
+        if base_stun == 0:
+            return 0  # Sem congelamento base
+        
+        time_after_2min = max(0, self.elapsed_time - 120)  # 120 segundos = 2 minutos
+        
+        if time_after_2min <= 0:
+            return 0.5  # Até 2 minutos, sempre 0.5s
+        elif time_after_2min <= 600:  # 2:00 até 2:10 (10 segundos)
+            return 0.6
+        elif time_after_2min <= 1200:  # 2:11 até 2:20 (10 segundos)
+            return 0.75
+        elif time_after_2min <= 1800:  # 2:21 até 2:30 (10 segundos)
+            return 0.9
+        else:  # 2:31 em diante
+            return 1.0
 
     def clear(self):
         """Limpa todos os inimigos"""

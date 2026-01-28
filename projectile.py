@@ -2,6 +2,29 @@ import pygame
 import math
 
 
+class Coin:
+    """Classe que representa uma moeda caída"""
+    
+    def __init__(self, x, y, value=10):
+        self.pos = pygame.Vector2(x, y)
+        self.value = value
+        self.radius = 6
+        self.collected = False
+    
+    def draw(self, window):
+        """Desenha a moeda"""
+        # Moeda dourada
+        pygame.draw.circle(window, (255, 215, 0), self.pos, self.radius)
+        pygame.draw.circle(window, (184, 134, 11), self.pos, self.radius, 2)
+        # Brilho
+        pygame.draw.circle(window, (255, 255, 100), self.pos, self.radius // 2)
+    
+    def is_colliding_with_player(self, player_pos, player_radius):
+        """Verifica colisão com o jogador"""
+        distance = self.pos.distance_to(player_pos)
+        return distance < (self.radius + player_radius + 20)  # Hitbox maior para coleta automática
+
+
 class Projectile:
     """Classe que representa um projétil (player ou inimigo)"""
     

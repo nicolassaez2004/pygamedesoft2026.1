@@ -92,12 +92,15 @@ def gameplay_loop(window, clock):
         final_volume = 0.22
 
     score = 0
+    money = 0  # Sistema de dinheiro
+    elapsed_time = 0  # Cronômetro de tempo decorrido no jogo
     dt = 0
     attack_cooldown_right = 0
     attack_cooldown_duration = 0.3
     current_melee_attack = None  # Ataque melee ativo
     time = 0  # Timer para animações
-    elapsed_time = 0  # Cronômetro de tempo decorrido no jogo
+    purchase_cooldown = 0  # Cooldown para compras
+    purchase_cooldown_duration = 0.5  # 500ms entre compras
     
     # Sistema de pontuação por tempo
     time_score_timer = 0
@@ -163,7 +166,7 @@ def gameplay_loop(window, clock):
             player_obj.draw(window)
             
             # Desenha HUD básico
-            draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time)
+            draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time, money)
             
             # Desenha tutorial
             draw_tutorial(window, tutorial_timer)
@@ -195,6 +198,7 @@ def gameplay_loop(window, clock):
         # Incrementa timer para animações
         time += dt
         elapsed_time += dt  # Incrementa cronômetro
+        purchase_cooldown = max(0, purchase_cooldown - dt)  # Reduz cooldown de compras
         
         if not player_obj.game_over:
             # Aumenta dificuldade com base no score
@@ -231,7 +235,7 @@ def gameplay_loop(window, clock):
             bow_left.update(dt, player_obj.pos)
             
             # Atualiza inimigos (ISSO ESTAVA FALTANDO!)
-            enemy_manager.update(dt, player_obj.pos)
+            enemy_manager.update(dt, player_obj.pos, elapsed_time)
             
             # Verifica colisão de ataque melee com inimigos
             if current_melee_attack:
@@ -243,6 +247,8 @@ def gameplay_loop(window, clock):
                                 assets['som_fantasma_morre'].play()
                             enemy_manager.remove_enemy(enemy_obj)
                             score += 100
+                            # Ganha 2 dinheiro ao eliminar
+                            money += 2
                 current_melee_attack = None  # Remove o ataque após checar colisão
             
             # Verifica colisão de projéteis (ataque direito) com inimigos
@@ -253,6 +259,8 @@ def gameplay_loop(window, clock):
                     if hit_enemy.take_damage(proj.damage):
                         enemy_manager.remove_enemy(hit_enemy)
                         score += 100
+                        # Ganha 2 dinheiro ao eliminar
+                        money += 2
                     # Toca som de acerto
                     if assets['som_flecha_acerto']:
                         assets['som_flecha_acerto'].play()
@@ -260,18 +268,37 @@ def gameplay_loop(window, clock):
             # Aumenta dificuldade conforme score
             enemy_manager.increase_difficulty(score)
             
+            # Variáveis de interação com itens
+            near_bausprite = False
+            near_kitmedico = False
+            bausprite_cost = 15  # Custo para comprar munição
+            munition_recovery = 10  # Munição recuperada por compra
+            kitmedico_cost = 20  # Custo para usar o kit médico
+            kitmedico_recovery = 1  # Vida recuperada (sempre 1)
+            
             # Verifica colisão com bausprite
             bausprite_rect = assets['bausprite'].get_rect(topleft=(440, 200))
             player_rect = pygame.Rect(player_obj.pos[0] - player_obj.radius, player_obj.pos[1] - player_obj.radius, player_obj.radius * 2, player_obj.radius * 2)
             if bausprite_rect.colliderect(player_rect):
-                # Colisão com bausprite - pode adicionar lógica (coleta, etc)
-                pass
+                near_bausprite = True
+                # Verifica se pressionou E para comprar
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_e] and money >= bausprite_cost and purchase_cooldown <= 0:
+                    money -= bausprite_cost
+                    bow_left.ammo = min(bow_left.ammo + munition_recovery, bow_left.max_ammo)
+                    purchase_cooldown = purchase_cooldown_duration  # Ativa cooldown
+
             
             # Verifica colisão com kitmedico
             kitmedico_rect = assets['kitmedico'].get_rect(topleft=(760, 200))
             if kitmedico_rect.colliderect(player_rect):
-                # Colisão com kitmedico - pode adicionar lógica (cura, etc)
-                pass
+                near_kitmedico = True
+                # Verifica se pressionou E para recuperar vida
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_e] and player_obj.health < player_obj.max_health and money >= kitmedico_cost and purchase_cooldown <= 0:
+                    money -= kitmedico_cost
+                    player_obj.health = min(player_obj.health + kitmedico_recovery, player_obj.max_health)
+                    purchase_cooldown = purchase_cooldown_duration  # Ativa cooldown
             arco_rect = assets['arco'].get_rect(topleft=(440, 440))
             if arco_rect.colliderect(player_rect):
                 pass
@@ -354,8 +381,32 @@ def gameplay_loop(window, clock):
             pygame.draw.rect(flash_surface, (255, 0, 0, alpha), flash_surface.get_rect())
             window.blit(flash_surface, (0, 0))
         
+        # Desenha prompts de interação
+        font_prompt = pygame.font.SysFont('Arial', 25)
+        
+        if near_bausprite:
+            prompt_text = f'Pressione "E" para comprar {munition_recovery} munição ({bausprite_cost}$)'
+            if money >= bausprite_cost:
+                prompt_color = (100, 255, 100)  # Verde
+            else:
+                prompt_color = (255, 100, 100)  # Vermelho (sem dinheiro)
+            prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+            prompt_x = 640 - prompt_surface.get_width() // 2
+            window.blit(prompt_surface, (prompt_x, 600))
+        
+        if near_kitmedico:
+            if player_obj.health < player_obj.max_health:
+                prompt_text = f'Pressione "E" para recuperar {kitmedico_recovery} vida ({kitmedico_cost}$)'
+                if money >= kitmedico_cost:
+                    prompt_color = (100, 200, 255)
+                else:
+                    prompt_color = (255, 100, 100)  # Vermelho (sem dinheiro)
+                prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+                prompt_x = 640 - prompt_surface.get_width() // 2
+                window.blit(prompt_surface, (prompt_x, 600))
+        
         # Desenha HUD melhorado
-        draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time)
+        draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time, money)
         
         # Desenha status de game over
         if player_obj.game_over:
@@ -377,7 +428,7 @@ def draw_health_bar(surface, x, y, width, height, value, max_value, color, bg_co
     pygame.draw.rect(surface, border_color, (x, y, width, height), 2, border_radius=5)
 
 
-def draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time=0):
+def draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time=0, money=0):
     """Desenha a HUD melhorada"""
     # Fontes
     font_large = pygame.font.SysFont('Arial', 45, bold=True)
@@ -397,6 +448,11 @@ def draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_t
     
     window.blit(score_shadow, (score_x + 2, 12))
     window.blit(score_text, (score_x, 10))
+    
+    # Dinheiro abaixo do score (centralizado)
+    money_text = font_medium.render(f"${money}", True, (255, 215, 0))
+    money_x = 640 - money_text.get_width() // 2
+    window.blit(money_text, (money_x, 55))
     
     # Vida (abaixo do cronômetro)
     health_label = font_medium.render("VIDA", True, (255, 255, 255))
