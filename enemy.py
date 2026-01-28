@@ -390,15 +390,10 @@ class EnemyManager:
         """Aumenta dificuldade com base no score - progressão lenta"""
         self.current_score = score
         
-        # Limitar máximo de inimigos conforme score (progressão mais lenta)
-        if score < 1500:
-            self.max_enemies = 3
-        elif score < 3500:
-            self.max_enemies = 4
-        elif score < 6000:
-            self.max_enemies = 5
-        else:
-            self.max_enemies = 6
+        # Limitar máximo de inimigos conforme score: +1 a cada 4000 pontos
+        base_enemies = 3
+        additional_enemies = score // 4000
+        self.max_enemies = base_enemies + additional_enemies
         
         # Aumentar dificuldade muito mais gradualmente (reduzido de 1/5000 para 1/8000)
         self.difficulty = 1.0 + (score / 8000.0)

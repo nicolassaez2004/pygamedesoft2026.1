@@ -49,6 +49,25 @@ def inicializa(window_width=1280, window_height=720):
     except:
         espadasprite = pygame.Surface((80, 80))
         espadasprite.fill((200, 150, 100))
+    
+    # Carrega sprites das flechas do jogador
+    try:
+        flecha_jogador_1 = pygame.image.load('Sprites/FlechaJOGADOR1.png')
+        flecha_jogador_1 = pygame.transform.scale(flecha_jogador_1, (50, 50))
+    except:
+        flecha_jogador_1 = None
+    
+    try:
+        flecha_jogador_2 = pygame.image.load('Sprites/FlechaJOGADOR2.png')
+        flecha_jogador_2 = pygame.transform.scale(flecha_jogador_2, (52, 52))
+    except:
+        flecha_jogador_2 = None
+    
+    try:
+        flecha_jogador_3 = pygame.image.load('Sprites/FlechaJOGADOR3.png')
+        flecha_jogador_3 = pygame.transform.scale(flecha_jogador_3, (54, 54))
+    except:
+        flecha_jogador_3 = None
 
     assets = {}
     assets['bg'] = bg
@@ -60,6 +79,9 @@ def inicializa(window_width=1280, window_height=720):
     assets['kitmedico'] = kitmedico
     assets['arco'] = arco
     assets['espadasprite'] = espadasprite
+    assets['flecha_jogador_1'] = flecha_jogador_1
+    assets['flecha_jogador_2'] = flecha_jogador_2
+    assets['flecha_jogador_3'] = flecha_jogador_3
     
     # Carrega sons
     try:
@@ -70,6 +92,7 @@ def inicializa(window_width=1280, window_height=720):
         assets['som_dano'] = pygame.mixer.Sound('sons/TomouDanoPerdeuVida.mp3')
         assets['som_fantasma_morre'] = pygame.mixer.Sound('sons/fantasmamorrendo.mp3')
         assets['som_fantasma_morre'].set_volume(0.15)  # Reduz volume para 15%
+        assets['som_disparo'] = pygame.mixer.Sound('sons/disparo.mp3')
     except Exception as e:
         print(f"Aviso: Não foi possível carregar alguns sons: {e}")
         # Cria sons vazios para evitar erros se os arquivos não existirem
@@ -79,6 +102,7 @@ def inicializa(window_width=1280, window_height=720):
         assets['som_stun'] = None
         assets['som_dano'] = None
         assets['som_fantasma_morre'] = None
+        assets['som_disparo'] = None
 
     return assets
 
@@ -118,7 +142,7 @@ def gameplay_loop(window, clock):
         final_volume = 0.22
 
     score = 0
-    money = 0  # Sistema de dinheiro
+    money = 50  # Sistema de dinheiro (começa com 50 para testes)
     elapsed_time = 0  # Cronômetro de tempo decorrido no jogo
     dt = 0
     attack_cooldown_right = 0
@@ -139,6 +163,9 @@ def gameplay_loop(window, clock):
     # Efeito de dano
     damage_flash_timer = 0
     
+    # Efeitos visuais de impacto (lista de efeitos quando soco acerta fantasma)
+    impact_effects = []  # Cada item: {'pos': (x, y), 'timer': float, 'particles': [...]}
+    
     # Tutorial inicial
     show_tutorial = True
     tutorial_timer = 5.0  # Mostra por 5 segundos
@@ -148,6 +175,13 @@ def gameplay_loop(window, clock):
     
     # Custo do kit médico (começa em 2 e dobra a cada compra)
     kitmedico_cost = 2
+    
+    # Controle de items comprados
+    sword_purchased = False
+    
+    # Controle de upgrades de flecha
+    arrow_level = 0  # 0 = sem arco, 1 = FlechaJOGADOR1, 2 = FlechaJOGADOR2, 3 = FlechaJOGADOR3
+    bow_purchased = False  # Controle se o arco foi comprado
 
     while True:
         for event in pygame.event.get():
@@ -189,7 +223,9 @@ def gameplay_loop(window, clock):
             window.blit(assets['bausprite'], (440, 200))
             window.blit(assets['kitmedico'], (760, 200))
             window.blit(assets['arco'], (440, 440))
-            window.blit(assets['espadasprite'], (760, 440))
+            # Desenha espada apenas se não foi comprada
+            if not sword_purchased:
+                window.blit(assets['espadasprite'], (760, 440))
             
             # Desenha o player (parado)
             player_obj.draw(window)
@@ -264,6 +300,9 @@ def gameplay_loop(window, clock):
             if mouse_buttons[2] and attack_cooldown_right <= 0:  # Botão direito
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 bow_left.shoot(mouse_x, mouse_y)
+                # Toca som de disparo
+                if assets['som_disparo']:
+                    assets['som_disparo'].play()
                 attack_cooldown_right = attack_cooldown_duration
 
             # Atualiza arco
@@ -280,6 +319,23 @@ def gameplay_loop(window, clock):
                             # Toca som se for fantasma
                             if isinstance(enemy_obj, enemy.GhostersonEnemy) and assets['som_fantasma_morre']:
                                 assets['som_fantasma_morre'].play()
+                                # Adiciona efeito visual de impacto no fantasma
+                                import random
+                                particles = []
+                                for _ in range(15):  # 15 partículas
+                                    angle = random.uniform(0, 360)
+                                    speed = random.uniform(100, 300)
+                                    particles.append({
+                                        'pos': pygame.Vector2(enemy_obj.pos.x, enemy_obj.pos.y),
+                                        'vel': pygame.Vector2(speed, 0).rotate(angle),
+                                        'life': random.uniform(0.3, 0.6),
+                                        'size': random.randint(3, 8)
+                                    })
+                                impact_effects.append({
+                                    'pos': pygame.Vector2(enemy_obj.pos.x, enemy_obj.pos.y),
+                                    'timer': 0.6,
+                                    'particles': particles
+                                })
                             enemy_manager.remove_enemy(enemy_obj)
                             score += 100
                             # Ganha 2 dinheiro ao eliminar
@@ -309,9 +365,13 @@ def gameplay_loop(window, clock):
             near_kitmedico = False
             near_espadasprite = False
             near_arco = False
+            near_arrow_upgrade_1 = False
+            near_arrow_upgrade_2 = False
             bausprite_cost = 5  # Custo para comprar munição
             munition_recovery = 10  # Munição recuperada por compra
             kitmedico_recovery = 1  # Vida recuperada (sempre 1)
+            arrow_upgrade_cost_1 = 10  # Custo para upgrade 1 -> 2
+            arrow_upgrade_cost_2 = 15  # Custo para upgrade 2 -> 3
             espadasprite_cost = 4  # Preço da espada atualizado
             arco_cost = 6  # Preço do arco
             
@@ -354,6 +414,9 @@ def gameplay_loop(window, clock):
                     keys = pygame.key.get_pressed()
                     if keys[pygame.K_e] and money >= arco_cost and purchase_cooldown <= 0:
                         money -= arco_cost
+                        bow_purchased = True
+                        arrow_level = 1  # Ativa FlechaJOGADOR1
+                        bow_left.set_arrow_level(1, assets['flecha_jogador_1'])
                         # Se já tem espada, combina para espada_arco
                         if player_obj.weapon == 'espada':
                             player_obj.set_weapon('espada_arco')
@@ -371,11 +434,37 @@ def gameplay_loop(window, clock):
                     keys = pygame.key.get_pressed()
                     if keys[pygame.K_e] and money >= espadasprite_cost and purchase_cooldown <= 0:
                         money -= espadasprite_cost
+                        sword_purchased = True  # Marca que a espada foi comprada
                         # Se já tem arco, combina para espada_arco
                         if player_obj.weapon == 'arco':
                             player_obj.set_weapon('espada_arco')
                         else:
                             player_obj.set_weapon('espada')
+                        purchase_cooldown = purchase_cooldown_duration
+
+            # Sistema de upgrades de flecha
+            # Upgrade 1: FlechaJOGADOR1 -> FlechaJOGADOR2 (aparece no local onde estava o arco após comprar o arco)
+            if bow_purchased and arrow_level == 1:
+                arrow_upgrade_rect_1 = pygame.Rect(440, 440, 80, 80)
+                if arrow_upgrade_rect_1.colliderect(player_rect):
+                    near_arrow_upgrade_1 = True
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_e] and money >= arrow_upgrade_cost_1 and purchase_cooldown <= 0:
+                        money -= arrow_upgrade_cost_1
+                        arrow_level = 2
+                        bow_left.set_arrow_level(2, assets['flecha_jogador_2'])
+                        purchase_cooldown = purchase_cooldown_duration
+            
+            # Upgrade 2: FlechaJOGADOR2 -> FlechaJOGADOR3 (aparece no mesmo local após o primeiro upgrade)
+            if bow_purchased and arrow_level == 2:
+                arrow_upgrade_rect_2 = pygame.Rect(440, 440, 80, 80)
+                if arrow_upgrade_rect_2.colliderect(player_rect):
+                    near_arrow_upgrade_2 = True
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_e] and money >= arrow_upgrade_cost_2 and purchase_cooldown <= 0:
+                        money -= arrow_upgrade_cost_2
+                        arrow_level = 3
+                        bow_left.set_arrow_level(3, assets['flecha_jogador_3'])
                         purchase_cooldown = purchase_cooldown_duration
 
             # Verifica colisão com inimigos (dano no jogador)
@@ -413,6 +502,19 @@ def gameplay_loop(window, clock):
         # Atualiza efeito de dano
         if damage_flash_timer > 0:
             damage_flash_timer -= dt
+        
+        # Atualiza efeitos de impacto (partículas quando soco acerta fantasma)
+        for effect in impact_effects[:]:
+            effect['timer'] -= dt
+            if effect['timer'] <= 0:
+                impact_effects.remove(effect)
+            else:
+                # Atualiza partículas
+                for particle in effect['particles'][:]:
+                    particle['pos'] += particle['vel'] * dt
+                    particle['life'] -= dt
+                    if particle['life'] <= 0:
+                        effect['particles'].remove(particle)
 
         # Desenha o jogo
         window.blit(assets['bg'], (0, 0))
@@ -428,9 +530,15 @@ def gameplay_loop(window, clock):
         # Desenha kitmedico na posição especificada
         window.blit(assets['kitmedico'], (760, 200))
 
-        window.blit(assets['arco'], (440, 440))
+        # Desenha arco e upgrades de flecha
+        # Só mostra o arco se ainda não foi comprado OU se foi comprado mas ainda não atingiu nível máximo
+        if (not bow_purchased) or (bow_purchased and arrow_level < 3):
+            window.blit(assets['arco'], (440, 440))
+        # Se arrow_level == 3, não desenha (arco removido após upgrade máximo)
 
-        window.blit(assets['espadasprite'], (760, 440))
+        # Desenha espada apenas se não foi comprada
+        if not sword_purchased:
+            window.blit(assets['espadasprite'], (760, 440))
         
         # Desenha o player
         player_obj.draw(window)
@@ -444,6 +552,17 @@ def gameplay_loop(window, clock):
         
         # Desenha os inimigos
         enemy_manager.draw(window)
+        
+        # Desenha efeitos de impacto (partículas quando soco acerta fantasma)
+        for effect in impact_effects:
+            for particle in effect['particles']:
+                # Calcula alpha baseado na vida restante
+                alpha = int(255 * (particle['life'] / 0.6))
+                # Desenha partícula com cor branca/amarela brilhante
+                color = (255, 255, 200, alpha)
+                particle_surface = pygame.Surface((particle['size'] * 2, particle['size'] * 2), pygame.SRCALPHA)
+                pygame.draw.circle(particle_surface, color, (particle['size'], particle['size']), particle['size'])
+                window.blit(particle_surface, (particle['pos'].x - particle['size'], particle['pos'].y - particle['size']))
         
         # Efeito de flash quando toma dano
         if damage_flash_timer > 0:
@@ -501,6 +620,26 @@ def gameplay_loop(window, clock):
             prompt_text = f'Pressione "E" para comprar Arco ({arco_cost}$)'
             if money >= arco_cost:
                 prompt_color = (100, 255, 100)
+            else:
+                prompt_color = (255, 100, 100)
+            prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+            prompt_x = 640 - prompt_surface.get_width() // 2
+            window.blit(prompt_surface, (prompt_x, 600))
+        
+        if near_arrow_upgrade_1:
+            prompt_text = f'Pressione "E" para melhorar suas Flechas ({arrow_upgrade_cost_1}$)'
+            if money >= arrow_upgrade_cost_1:
+                prompt_color = (100, 255, 100)  # Verde
+            else:
+                prompt_color = (255, 100, 100)
+            prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+            prompt_x = 640 - prompt_surface.get_width() // 2
+            window.blit(prompt_surface, (prompt_x, 600))
+        
+        if near_arrow_upgrade_2:
+            prompt_text = f'Pressione "E" para melhorar suas Flechas ({arrow_upgrade_cost_2}$)'
+            if money >= arrow_upgrade_cost_2:
+                prompt_color = (100, 200, 255)  # Azul
             else:
                 prompt_color = (255, 100, 100)
             prompt_surface = font_prompt.render(prompt_text, True, prompt_color)

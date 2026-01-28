@@ -28,7 +28,7 @@ class Coin:
 class Projectile:
     """Classe que representa um projétil (player ou inimigo)"""
     
-    def __init__(self, x, y, target_x, target_y, speed=500, color=(255, 255, 0), radius=5, damage=1, image=None, stun_duration=0):
+    def __init__(self, x, y, target_x, target_y, speed=500, color=(255, 255, 0), radius=5, damage=1, image=None, stun_duration=0, penetration=0, no_ammo_consume_chance=0):
         self.pos = pygame.Vector2(x, y)
         self.target = pygame.Vector2(target_x, target_y)
         self.speed = speed
@@ -37,6 +37,9 @@ class Projectile:
         self.damage = damage
         self.image = image  # opcional: sprite do projétil
         self.stun_duration = stun_duration  # Duração do congelamento causado (0 se não congela)
+        self.penetration = penetration  # Número de inimigos que pode atravessar
+        self.enemies_hit = set()  # Conjunto de inimigos já atingidos (para penetração)
+        self.no_ammo_consume_chance = no_ammo_consume_chance  # Chance (0-1) de não consumir munição
         
         # Calcula direção
         direction = self.target - self.pos
@@ -92,6 +95,34 @@ class Bow:
         self.reload_rate = 0.2  # segundos entre disparos
         self.shoot_cooldown = 0
         
+        # Sistema de upgrade de flecha
+        self.arrow_level = 0  # 0 = nada, 1 = FlechaJOGADOR1, 2 = FlechaJOGADOR2, 3 = FlechaJOGADOR3
+        self.arrow_image = None  # Sprite da flecha
+        self.arrow_speed = 500
+        self.arrow_penetration = 0
+        self.arrow_no_ammo_consume_chance = 0.0
+        
+    def set_arrow_level(self, level, image=None):
+        """Define o nível de upgrade da flecha"""
+        self.arrow_level = level
+        self.arrow_image = image
+        
+        if level == 1:
+            # FlechaJOGADOR1: propriedades normais
+            self.arrow_speed = 500
+            self.arrow_penetration = 0
+            self.arrow_no_ammo_consume_chance = 0.0
+        elif level == 2:
+            # FlechaJOGADOR2: atravessa 1 inimigo (acerta 2 no máximo), mais rápida
+            self.arrow_speed = 600
+            self.arrow_penetration = 1
+            self.arrow_no_ammo_consume_chance = 0.0
+        elif level == 3:
+            # FlechaJOGADOR3: atravessa 2 inimigos (acerta 3 no máximo), ainda mais rápida, 12.5% chance de não consumir munição
+            self.arrow_speed = 700
+            self.arrow_penetration = 2
+            self.arrow_no_ammo_consume_chance = 0.125
+        
     def update(self, dt, player_pos):
         """Atualiza o arco e projéteis"""
         self.player_pos = player_pos
@@ -112,13 +143,21 @@ class Bow:
                 self.player_pos.y,
                 target_x,
                 target_y,
-                speed=500,
+                speed=self.arrow_speed,
                 color=(255, 255, 0),
                 radius=5,
-                damage=10
+                damage=10,
+                image=self.arrow_image,
+                penetration=self.arrow_penetration,
+                no_ammo_consume_chance=self.arrow_no_ammo_consume_chance
             )
             self.projectiles.append(projectile)
-            self.ammo -= 1
+            
+            # Verifica se deve consumir munição
+            import random
+            if random.random() > self.arrow_no_ammo_consume_chance:
+                self.ammo -= 1
+            
             self.shoot_cooldown = self.reload_rate
             return True
         return False
@@ -147,13 +186,18 @@ class Bow:
                     # Verifica se o inimigo é imune a projéteis (como fantasma)
                     is_immune = hasattr(enemy, 'immune_to_projectiles') and enemy.immune_to_projectiles
                     
-                    if projectile not in [p for p, _ in hit_enemies]:
+                    # Verifica se já acertou esse inimigo (para penetração)
+                    enemy_id = id(enemy)
+                    if enemy_id not in projectile.enemies_hit:
                         hit_enemies.append((projectile, enemy))
+                        projectile.enemies_hit.add(enemy_id)
                         
-                        # Remove o projétil apenas se acertar inimigo NÃO imune
-                        if not is_immune and projectile in self.projectiles:
-                            self.projectiles.remove(projectile)
-                            break
+                        # Remove o projétil se não tiver penetração ou já atingiu limite
+                        if not is_immune:
+                            hits_remaining = projectile.penetration - len(projectile.enemies_hit) + 1
+                            if hits_remaining <= 0 and projectile in self.projectiles:
+                                self.projectiles.remove(projectile)
+                                break
         
         return hit_enemies
     
