@@ -316,26 +316,43 @@ def gameplay_loop(window, clock):
                 for enemy_obj in enemy_manager.get_all_enemies():
                     if current_melee_attack.is_colliding_with_enemy(enemy_obj.pos, enemy_obj.radius):
                         if enemy_obj.take_damage(current_melee_attack.damage):
-                            # Toca som se for fantasma
-                            if isinstance(enemy_obj, enemy.GhostersonEnemy) and assets['som_fantasma_morre']:
-                                assets['som_fantasma_morre'].play()
-                                # Adiciona efeito visual de impacto no fantasma
-                                import random
-                                particles = []
-                                for _ in range(15):  # 15 partículas
-                                    angle = random.uniform(0, 360)
-                                    speed = random.uniform(100, 300)
-                                    particles.append({
-                                        'pos': pygame.Vector2(enemy_obj.pos.x, enemy_obj.pos.y),
-                                        'vel': pygame.Vector2(speed, 0).rotate(angle),
-                                        'life': random.uniform(0.3, 0.6),
-                                        'size': random.randint(3, 8)
-                                    })
-                                impact_effects.append({
+                            # Adiciona efeito visual de impacto
+                            import random
+                            particles = []
+                            
+                            if isinstance(enemy_obj, enemy.GhostersonEnemy):
+                                # Efeito para fantasma (cinza claro/branco - osso)
+                                particle_count = 15
+                                base_color = (220, 220, 220)  # Cinza claro/branco representando osso
+                                if assets['som_fantasma_morre']:
+                                    assets['som_fantasma_morre'].play()
+                            elif isinstance(enemy_obj, enemy.SkellingtonEnemy):
+                                # Efeito para Skellington (branco - osso)
+                                particle_count = 12
+                                base_color = (220, 220, 220)  # Branco representando osso
+                            else:
+                                # Efeito para inimigos normais como Mago (vermelho - sangue)
+                                particle_count = 12
+                                base_color = (200, 50, 50)  # Vermelho
+                            
+                            for _ in range(particle_count):
+                                angle = random.uniform(0, 360)
+                                speed = random.uniform(100, 300)
+                                particle = {
                                     'pos': pygame.Vector2(enemy_obj.pos.x, enemy_obj.pos.y),
-                                    'timer': 0.6,
-                                    'particles': particles
-                                })
+                                    'vel': pygame.Vector2(speed, 0).rotate(angle),
+                                    'life': random.uniform(0.3, 0.6),
+                                    'size': random.randint(3, 8),
+                                    'color': base_color
+                                }
+                                particles.append(particle)
+                            
+                            impact_effects.append({
+                                'pos': pygame.Vector2(enemy_obj.pos.x, enemy_obj.pos.y),
+                                'timer': 0.6,
+                                'particles': particles
+                            })
+                            
                             enemy_manager.remove_enemy(enemy_obj)
                             score += 100
                             # Ganha 2 dinheiro ao eliminar
@@ -347,6 +364,34 @@ def gameplay_loop(window, clock):
             for proj, hit_enemy in hit_enemies:
                 # Verifica se o inimigo é imune a projéteis (como o fantasma)
                 if not hasattr(hit_enemy, 'immune_to_projectiles') or not hit_enemy.immune_to_projectiles:
+                    # Adiciona efeito de sangue/impacto ao acertar inimigo
+                    import random
+                    particles = []
+                    particle_count = 10 if not isinstance(hit_enemy, enemy.GhostersonEnemy) else 8
+                    # Cor baseada no tipo de inimigo
+                    if isinstance(hit_enemy, enemy.GhostersonEnemy):
+                        base_color = (220, 220, 220)  # Cinza claro/branco para fantasma (osso)
+                    elif isinstance(hit_enemy, enemy.SkellingtonEnemy):
+                        base_color = (220, 220, 220)  # Branco para Skellington (osso)
+                    else:
+                        base_color = (200, 50, 50)  # Vermelho para outros (Mago)
+                    
+                    for _ in range(particle_count):
+                        angle = random.uniform(0, 360)
+                        speed = random.uniform(80, 200)
+                        particles.append({
+                            'pos': pygame.Vector2(hit_enemy.pos.x, hit_enemy.pos.y),
+                            'vel': pygame.Vector2(speed, 0).rotate(angle),
+                            'life': random.uniform(0.2, 0.5),
+                            'size': random.randint(2, 5),
+                            'color': base_color
+                        })
+                    impact_effects.append({
+                        'pos': pygame.Vector2(hit_enemy.pos.x, hit_enemy.pos.y),
+                        'timer': 0.5,
+                        'particles': particles
+                    })
+                    
                     if hit_enemy.take_damage(proj.damage):
                         enemy_manager.remove_enemy(hit_enemy)
                         score += 100
@@ -553,13 +598,18 @@ def gameplay_loop(window, clock):
         # Desenha os inimigos
         enemy_manager.draw(window)
         
-        # Desenha efeitos de impacto (partículas quando soco acerta fantasma)
+        # Desenha efeitos de impacto (partículas quando acerta inimigos)
         for effect in impact_effects:
             for particle in effect['particles']:
                 # Calcula alpha baseado na vida restante
                 alpha = int(255 * (particle['life'] / 0.6))
-                # Desenha partícula com cor branca/amarela brilhante
-                color = (255, 255, 200, alpha)
+                # Usa cor customizada se definida, senão usa branca/amarela padrão
+                if 'color' in particle:
+                    r, g, b = particle['color']
+                    color = (r, g, b, alpha)
+                else:
+                    color = (255, 255, 200, alpha)  # Branco/amarelo para fantasmas
+                
                 particle_surface = pygame.Surface((particle['size'] * 2, particle['size'] * 2), pygame.SRCALPHA)
                 pygame.draw.circle(particle_surface, color, (particle['size'], particle['size']), particle['size'])
                 window.blit(particle_surface, (particle['pos'].x - particle['size'], particle['pos'].y - particle['size']))

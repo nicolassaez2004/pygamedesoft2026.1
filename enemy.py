@@ -164,7 +164,8 @@ class SkellingtonEnemy(RangedEnemy):
             radius=choice["radius"],
             damage=choice["damage"],
             image=self.manager_ref.arrow_sprites[choice["sprite"]],
-            stun_duration=scaled_stun
+            stun_duration=scaled_stun,
+            enable_trail=False  # Sem trail para projéteis de inimigos
         )
 
 
@@ -226,7 +227,8 @@ class MageEnemy(RangedEnemy):
             radius=choice["radius"],
             damage=choice["damage"],
             image=self.manager_ref.magic_sprites[choice["sprite"]],
-            stun_duration=scaled_stun
+            stun_duration=scaled_stun,
+            enable_trail=False  # Sem trail para projéteis de inimigos
         )
 
 
