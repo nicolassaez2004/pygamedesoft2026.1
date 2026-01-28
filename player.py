@@ -11,34 +11,34 @@ player_parado_espada_arco = pygame.image.load('jogador/player-parado-espada-arco
 player_andas_nada = pygame.image.load('jogador/player-andas-nada.png') #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
 player_andas_espada = pygame.image.load('jogador/player-andas-espada.png')
 player_andas_arco = pygame.image.load('jogador/player-andas-arco.png')
-player_andas_espada_arco = pygame.image.load('jogador/player-parado-espada-arco.png')
+player_andas_espada_arco = pygame.image.load('jogador/player-andas-espada-arco.png')
 
 #animações jogador golpeando
 
 player_golpe_nada = pygame.image.load('jogador/player-golpe-nada.png') #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
 player_golpe_espada = pygame.image.load('jogador/player-golpe-espada.png')
 player_golpe_arco = pygame.image.load('jogador/player-golpe-arco.png')
-player_golpe_espada_arco = pygame.image.load('jogador/player-parado-espada-arco.png')
+player_golpe_espada_arco = pygame.image.load('jogador/player-golpe-espada-arco.png')
 
 assets = {}
 
 #animações jogador parado
-assets['player_parado_nada'] = player_parado_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
-assets['player_parado_espada'] = player_parado_espada
-assets['player_parado_arco'] = player_parado_arco
-assets['player_parado_espada_arco'] = player_parado_espada_arco
+assets['player_parado_nada'] = player_parado_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 4 de dano)
+assets['player_parado_espada'] = player_parado_espada #player com somente espada na mão (não consegue atirar e seu golpe dá 10 de dano)
+assets['player_parado_arco'] = player_parado_arco #player com somente arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá apenas 4 de dano)
+assets['player_parado_espada_arco'] = player_parado_espada_arco #player com espada e arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá 10 de dano)
 
 #animações jogador caminhando
-assets['player_andas_nada'] = player_andas_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
-assets['player_andas_espada'] = player_andas_espada
-assets['player_andas_arco'] = player_andas_arco
-assets['player_andas_espada_arco'] = player_andas_espada_arco
+assets['player_andas_nada'] = player_andas_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 4 de dano)
+assets['player_andas_espada'] = player_andas_espada #player com somente espada na mão (não consegue atirar e seu golpe dá 10 de dano)
+assets['player_andas_arco'] = player_andas_arco #player com somente arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá apenas 4 de dano)
+assets['player_andas_espada_arco'] = player_andas_espada_arco #player com espada e arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá 10 de dano) 
 
 #animações jogador golpeando
-assets['player_golpe_nada'] = player_golpe_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
-assets['player_golpe_espada'] = player_golpe_espada
-assets['player_golpe_arco'] = player_golpe_arco
-assets['player_golpe_espada_arco'] = player_golpe_espada_arco
+assets['player_golpe_nada'] = player_golpe_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 4 de dano)
+assets['player_golpe_espada'] = player_golpe_espada #player com somente espada na mão (não consegue atirar e seu golpe dá 10 de dano)
+assets['player_golpe_arco'] = player_golpe_arco #player com somente arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá apenas 4 de dano)
+assets['player_golpe_espada_arco'] = player_golpe_espada_arco #player com espada e arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá 10 de dano)
 
 class Player:
     """Classe que representa o jogador com animações baseadas em assets"""
@@ -62,7 +62,7 @@ class Player:
         
         # Sistema de armas (começa sem armas)
         self.weapon = "nada"  # nada, espada, arco, espada_arco
-        self.melee_damage = 1  # Dano padrão sem armas
+        self.melee_damage = 4  # Dano padrão sem armas
         
         # Armazena frames de cada estado
         self.animation_frames = {}  # Chave: estado, valor: lista de frames
@@ -70,8 +70,9 @@ class Player:
         # Carregar sprites como assets
         self._load_sprites()
         # Tenta usar o primeiro frame de idle, ou fallback
-        if "idle" in self.animation_frames and len(self.animation_frames["idle"]) > 0:
-            self.current_sprite = self.animation_frames["idle"][0]
+        idle_nada_key = ("idle", "nada")
+        if idle_nada_key in self.animation_frames and len(self.animation_frames[idle_nada_key]) > 0:
+            self.current_sprite = self.animation_frames[idle_nada_key][0]
         else:
             self.current_sprite = self._get_sprite_for_state("idle")
         
@@ -151,6 +152,7 @@ class Player:
                             print(f"  Erro ao extrair frame ({col}, {row}): {e}")
                 
                 # Armazena os frames nomeados por estado + arma
+                # Extrai state e weapon da asset_key
                 if asset_key.startswith('player_parado'):
                     state_key = 'idle'
                 elif asset_key.startswith('player_andas'):
@@ -160,13 +162,20 @@ class Player:
                 else:
                     state_key = 'idle'
                 
-                # Cria chave composta: estado + arma
-                composite_key = (state_key, self.weapon)
+                # Extrai a arma da asset_key (tudo após estado)
+                if asset_key.startswith('player_parado_'):
+                    weapon_key = asset_key.replace('player_parado_', '')
+                elif asset_key.startswith('player_andas_'):
+                    weapon_key = asset_key.replace('player_andas_', '')
+                elif asset_key.startswith('player_golpe_'):
+                    weapon_key = asset_key.replace('player_golpe_', '')
+                else:
+                    weapon_key = 'nada'
                 
-                # Também armazena com chave simples (fallback para idle/walk/attack1 genérico)
-                if state_key not in self.animation_frames or len(self.animation_frames[state_key]) < len(frames):
-                    self.animation_frames[state_key] = frames
-                    print(f"  ✓ {state_key} carregado com {len(frames)} frames")
+                # Armazena com chave composta (state, weapon)
+                composite_key = (state_key, weapon_key)
+                self.animation_frames[composite_key] = frames
+                print(f"  ✓ {composite_key} carregado com {len(frames)} frames")
                     
             except Exception as e:
                 print(f"Erro ao processar '{asset_key}': {e}")
@@ -202,7 +211,7 @@ class Player:
             img = pygame.transform.scale(img, (80, 80))
             return img
         
-        # Se não encontrar, tenta sem arma
+        # Se não encontrar, tenta sem arma (fallback para nada)
         asset_key_fallback = f"{state_prefix}_nada"
         if asset_key_fallback in assets:
             img = assets[asset_key_fallback].copy()
@@ -282,17 +291,20 @@ class Player:
             self.animation_frame += 1
             
             # Reseta para o primeiro frame se chegou ao final
-            if self.state in self.animation_frames:
-                total_frames = len(self.animation_frames[self.state])
+            state_weapon_key = (self.state, self.weapon)
+            if state_weapon_key in self.animation_frames:
+                total_frames = len(self.animation_frames[state_weapon_key])
                 if self.animation_frame >= total_frames:
                     self.animation_frame = 0
         
         # Obtém o sprite atual baseado no estado e frame
-        if self.state in self.animation_frames:
-            frame_idx = min(self.animation_frame, len(self.animation_frames[self.state]) - 1)
-            self.current_sprite = self.animation_frames[self.state][frame_idx]
+        # Tenta buscar frames com estado + arma atual
+        state_weapon_key = (self.state, self.weapon)
+        if state_weapon_key in self.animation_frames:
+            frame_idx = min(self.animation_frame, len(self.animation_frames[state_weapon_key]) - 1)
+            self.current_sprite = self.animation_frames[state_weapon_key][frame_idx]
         else:
-            # Fallback se não houver frames carregados
+            # Fallback se não houver frames para essa combinação específica
             self.current_sprite = self._get_sprite_for_state(self.state)
         
         # Mantém o player dentro da tela
@@ -368,14 +380,17 @@ class Player:
             self.weapon = weapon_type
             # Ajusta dano do ataque baseado na arma
             if weapon_type == "nada":
-                # Sem arma, dano mais baixo
-                self.melee_damage = 1
+                # Sem arma, dano 4
+                self.melee_damage = 4
             elif weapon_type == "espada":
-                self.melee_damage = 3
+                # Só espada, dano 10
+                self.melee_damage = 10
             elif weapon_type == "arco":
-                self.melee_damage = 1  # Arco é para disparar, não para melee
+                # Só arco, dano 4
+                self.melee_damage = 4
             elif weapon_type == "espada_arco":
-                self.melee_damage = 2
+                # Espada e arco, dano 10
+                self.melee_damage = 10
     
     def get_melee_attack(self):
         """Retorna um ataque melee se estiver ativo (apenas uma vez por ataque)"""

@@ -14,8 +14,8 @@ class Enemy:
         self.sprite = sprite
         self.sprite_flipped = pygame.transform.flip(self.sprite, True, False)
         self.radius = radius if radius is not None else self.sprite.get_width() // 2
-        self.health = 1
-        self.max_health = 1
+        self.health = 10
+        self.max_health = 10
         self.flipped = False
 
     def move_towards(self, target_pos, dt):

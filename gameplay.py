@@ -294,6 +294,7 @@ def gameplay_loop(window, clock):
             
             # Variáveis de interação com itens
             near_bausprite = False
+            near_bausprite_sem_arco = False
             near_kitmedico = False
             near_espadasprite = False
             near_arco = False
@@ -308,13 +309,20 @@ def gameplay_loop(window, clock):
             bausprite_rect = assets['bausprite'].get_rect(topleft=(440, 200))
             player_rect = pygame.Rect(player_obj.pos[0] - player_obj.radius, player_obj.pos[1] - player_obj.radius, player_obj.radius * 2, player_obj.radius * 2)
             if bausprite_rect.colliderect(player_rect):
-                near_bausprite = True
-                # Verifica se pressionou E para comprar
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_e] and money >= bausprite_cost and purchase_cooldown <= 0:
-                    money -= bausprite_cost
-                    bow_left.ammo = min(bow_left.ammo + munition_recovery, bow_left.max_ammo)
-                    purchase_cooldown = purchase_cooldown_duration  # Ativa cooldown
+                # Verifica se jogador tem arco
+                has_bow = player_obj.weapon in ['arco', 'espada_arco']
+                if has_bow:
+                    near_bausprite = True
+                    # Verifica se pressionou E para comprar
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_e] and money >= bausprite_cost and purchase_cooldown <= 0:
+                        money -= bausprite_cost
+                        bow_left.ammo = min(bow_left.ammo + munition_recovery, bow_left.max_ammo)
+                        purchase_cooldown = purchase_cooldown_duration  # Ativa cooldown
+                else:
+                    # Jogador está próximo do baú mas não tem arco
+                    near_bausprite = False
+                    near_bausprite_sem_arco = True
 
             
             # Verifica colisão com kitmedico
@@ -434,6 +442,13 @@ def gameplay_loop(window, clock):
                 prompt_color = (100, 255, 100)  # Verde
             else:
                 prompt_color = (255, 100, 100)  # Vermelho (sem dinheiro)
+            prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+            prompt_x = 640 - prompt_surface.get_width() // 2
+            window.blit(prompt_surface, (prompt_x, 600))
+        
+        if near_bausprite_sem_arco:
+            prompt_text = 'Sem arco'
+            prompt_color = (255, 100, 100)  # Vermelho
             prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
             prompt_x = 640 - prompt_surface.get_width() // 2
             window.blit(prompt_surface, (prompt_x, 600))
