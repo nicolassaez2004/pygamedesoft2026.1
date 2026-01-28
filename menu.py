@@ -11,6 +11,14 @@ def draw_gradient_rect(surface, color1, color2, rect):
         pygame.draw.line(surface, (r, g, b), (rect.x, rect.y + y), (rect.x + rect.width, rect.y + y))
 
 def menu_loop(window, clock):
+    # Carrega e toca a música do menu
+    try:
+        pygame.mixer.music.load('sons/menu.mp3')
+        pygame.mixer.music.play(-1)  # -1 para loop infinito
+        pygame.mixer.music.set_volume(0.22)
+    except Exception as e:
+        print(f"Aviso: Não foi possível carregar a música do menu: {e}")
+    
     # Fontes melhoradas
     font_titulo = pygame.font.SysFont('Arial', 100, bold=True)
     font_opcao = pygame.font.SysFont('Arial', 50)

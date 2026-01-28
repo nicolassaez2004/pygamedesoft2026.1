@@ -111,6 +111,7 @@ class SkellingtonEnemy(RangedEnemy):
 
     def __init__(self, x, y, sprite, speed=140, radius=None):
         super().__init__(x, y, sprite, speed, radius, preferred_min=260, preferred_max=420)
+        self.shoot_interval = 2.5  # Reduzido de 1.8 para começar mais devagar
 
     def maybe_shoot(self, player_pos):
         if not self.can_shoot():
@@ -128,6 +129,12 @@ class SkellingtonEnemy(RangedEnemy):
         else:
             # Todos os tipos disponíveis
             arrow_idx = random.randint(0, 2)
+        
+        # Reduzir intervalo conforme dificuldade aumenta
+        base_interval = 2.5
+        difficulty_multiplier = max(1.0, 1.0 - (difficulty_level - 1.0) * 0.15)  # Reduz até 15% conforme dificuldade
+        adjusted_interval = base_interval * difficulty_multiplier
+        self.shoot_interval = adjusted_interval
         
         # Definição com escalação
         arrow_types = [
@@ -156,7 +163,7 @@ class MageEnemy(RangedEnemy):
 
     def __init__(self, x, y, sprite, speed=130, radius=None):
         super().__init__(x, y, sprite, speed, radius, preferred_min=260, preferred_max=420)
-        self.shoot_interval = 2.1
+        self.shoot_interval = 2.8  # Reduzido de 2.1 para começar mais devagar
 
     def maybe_shoot(self, player_pos):
         if not self.can_shoot():
@@ -174,6 +181,12 @@ class MageEnemy(RangedEnemy):
         else:
             # Todos os tipos disponíveis
             spell_idx = random.randint(0, 2)
+        
+        # Reduzir intervalo conforme dificuldade aumenta
+        base_interval = 2.8
+        difficulty_multiplier = max(1.0, 1.0 - (difficulty_level - 1.0) * 0.15)  # Reduz até 15% conforme dificuldade
+        adjusted_interval = base_interval * difficulty_multiplier
+        self.shoot_interval = adjusted_interval
         
         # Definição com escalação
         spells = [
@@ -243,6 +256,7 @@ class EnemyManager:
         self.max_enemies = 3  # reduzido de 5 para 3
         self.difficulty = 1.0  # multiplicador de dificuldade
         self.enemy_projectiles = []
+        self.current_score = 0  # Rastreia o score para ajustar dificuldade
 
     def spawn_enemy(self):
         """Spawna um novo inimigo em um local aleatório nas bordas e tipo aleatório"""
@@ -340,16 +354,27 @@ class EnemyManager:
 
     def get_all_enemies(self):
         """Retorna lista de todos os inimigos"""
-        return self.enemies
+        return self.enemies[:]
 
     def increase_difficulty(self, score):
-        """Aumenta a dificuldade baseado no score"""
-        # A cada 500 pontos, aumenta a velocidade em 15%
-        self.difficulty = 1.0 + (score // 500) * 0.15
-        # A cada 1000 pontos, adiciona mais 1 inimigo (máximo)
-        self.max_enemies = 5 + (score // 1000)
-        # A cada 2000 pontos, reduz o tempo entre spawns
-        self.spawn_interval = max(0.3, 1.0 - (score // 2000) * 0.15)
+        """Aumenta dificuldade com base no score - progressão lenta"""
+        self.current_score = score
+        
+        # Limitar máximo de inimigos conforme score (progressão mais lenta)
+        if score < 1500:
+            self.max_enemies = 3
+        elif score < 3500:
+            self.max_enemies = 4
+        elif score < 6000:
+            self.max_enemies = 5
+        else:
+            self.max_enemies = 6
+        
+        # Aumentar dificuldade muito mais gradualmente (reduzido de 1/5000 para 1/8000)
+        self.difficulty = 1.0 + (score / 8000.0)
+        
+        # Spawn interval reduz bem lentamente
+        self.spawn_interval = max(0.8, 2.0 - (score / 10000.0))
 
     def clear(self):
         """Limpa todos os inimigos"""

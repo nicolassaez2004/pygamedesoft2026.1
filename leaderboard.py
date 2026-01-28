@@ -3,6 +3,14 @@ import pygame
 def leaderboard_loop(window, clock):
     """Tela de leaderboard que permite voltar ao menu"""
     
+    # Carrega e toca a música do menu
+    try:
+        pygame.mixer.music.load('sons/menu.mp3')
+        pygame.mixer.music.play(-1)  # -1 para loop infinito
+        pygame.mixer.music.set_volume(0.22) 
+    except Exception as e:
+        print(f"Aviso: Não foi possível carregar a música do menu: {e}")
+    
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

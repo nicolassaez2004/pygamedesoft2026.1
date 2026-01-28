@@ -74,6 +74,22 @@ def gameplay_loop(window, clock):
     
     # Inicializa o arco do player (ataque direito - bola amarela)
     bow_left = projectile.Bow(player_obj.pos, max_ammo=30)  # Bola amarela
+    
+    # Inicia transição de música (fade out do menu, fade in da gameplay)
+    pygame.mixer.music.fadeout(1000)  # Fade out de 1 segundo
+    try:
+        pygame.mixer.music.load('sons/trilha_sonora.mp3')
+        pygame.mixer.music.play(-1)  # -1 para loop infinito
+        pygame.mixer.music.set_volume(0)  # Começa sem som
+        # Fade in gradual
+        import time as time_module
+        start_time = time_module.time()
+        fade_duration = 12  # 12 segundos para fade in
+        final_volume = 0.22  
+    except Exception as e:
+        print(f"Aviso: Não foi possível carregar a música de gameplay: {e}")
+        fade_duration = 0
+        final_volume = 0.22
 
     score = 0
     dt = 0
@@ -81,6 +97,7 @@ def gameplay_loop(window, clock):
     attack_cooldown_duration = 0.3
     current_melee_attack = None  # Ataque melee ativo
     time = 0  # Timer para animações
+    elapsed_time = 0  # Cronômetro de tempo decorrido no jogo
     
     # Sistema de pontuação por tempo
     time_score_timer = 0
@@ -96,6 +113,9 @@ def gameplay_loop(window, clock):
     # Tutorial inicial
     show_tutorial = True
     tutorial_timer = 5.0  # Mostra por 5 segundos
+    
+    # Transição de música
+    music_transition_time = 0
 
     while True:
         for event in pygame.event.get():
@@ -121,6 +141,12 @@ def gameplay_loop(window, clock):
             if tutorial_timer <= 0:
                 show_tutorial = False
             
+            # Atualiza fade in da música durante o tutorial
+            music_transition_time += dt
+            if music_transition_time <= fade_duration and fade_duration > 0:
+                volume = (music_transition_time / fade_duration) * final_volume
+                pygame.mixer.music.set_volume(volume)
+            
             # Desenha apenas o fundo, plataforma e tutorial
             window.blit(assets['bg'], (0, 0))
             plataforma_x = (window.get_width() - 480) // 2
@@ -137,7 +163,7 @@ def gameplay_loop(window, clock):
             player_obj.draw(window)
             
             # Desenha HUD básico
-            draw_hud(window, score, player_obj, bow_left, enemy_manager, time)
+            draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time)
             
             # Desenha tutorial
             draw_tutorial(window, tutorial_timer)
@@ -145,6 +171,14 @@ def gameplay_loop(window, clock):
             pygame.display.flip()
             dt = clock.tick(60) / 1000
             continue
+        
+        # Atualiza fade in da música
+        music_transition_time += dt
+        if music_transition_time <= fade_duration and fade_duration > 0:
+            volume = (music_transition_time / fade_duration) * final_volume
+            pygame.mixer.music.set_volume(volume)
+        elif music_transition_time > fade_duration:
+            pygame.mixer.music.set_volume(final_volume)
         
         # Se pausado, mostra menu de pausa
         if paused:
@@ -160,8 +194,12 @@ def gameplay_loop(window, clock):
         
         # Incrementa timer para animações
         time += dt
+        elapsed_time += dt  # Incrementa cronômetro
         
         if not player_obj.game_over:
+            # Aumenta dificuldade com base no score
+            enemy_manager.increase_difficulty(score)
+            
             # Sistema de pontuação por tempo
             time_score_timer += dt
             if time_score_timer >= time_score_interval:
@@ -317,7 +355,7 @@ def gameplay_loop(window, clock):
             window.blit(flash_surface, (0, 0))
         
         # Desenha HUD melhorado
-        draw_hud(window, score, player_obj, bow_left, enemy_manager, time)
+        draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time)
         
         # Desenha status de game over
         if player_obj.game_over:
@@ -339,12 +377,18 @@ def draw_health_bar(surface, x, y, width, height, value, max_value, color, bg_co
     pygame.draw.rect(surface, border_color, (x, y, width, height), 2, border_radius=5)
 
 
-def draw_hud(window, score, player_obj, bow_left, enemy_manager, time):
+def draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_time=0):
     """Desenha a HUD melhorada"""
     # Fontes
     font_large = pygame.font.SysFont('Arial', 45, bold=True)
     font_medium = pygame.font.SysFont('Arial', 30, bold=True)
     font_small = pygame.font.SysFont('Arial', 25)
+    
+    # Cronômetro na esquerda (em cima de VIDA)
+    minutes = int(elapsed_time) // 60
+    seconds = int(elapsed_time) % 60
+    timer_text = font_medium.render(f"{minutes}:{seconds:02d}", True, (255, 255, 255))
+    window.blit(timer_text, (20, 20))
     
     # Score centralizado no meio da tela (branco) - sem painel roxo
     score_text = font_large.render(f"SCORE: {score}", True, (255, 255, 255))
@@ -354,21 +398,21 @@ def draw_hud(window, score, player_obj, bow_left, enemy_manager, time):
     window.blit(score_shadow, (score_x + 2, 12))
     window.blit(score_text, (score_x, 10))
     
-    # Vida
+    # Vida (abaixo do cronômetro)
     health_label = font_medium.render("VIDA", True, (255, 255, 255))
-    window.blit(health_label, (20, 65))
-    draw_health_bar(window, 100, 70, 200, 25, player_obj.health, player_obj.max_health, 
+    window.blit(health_label, (20, 75))
+    draw_health_bar(window, 100, 80, 200, 25, player_obj.health, player_obj.max_health, 
                    (0, 255, 0) if player_obj.health > 2 else (255, 100, 0))
     health_text = font_small.render(f"{player_obj.health}/{player_obj.max_health}", True, (255, 255, 255))
-    window.blit(health_text, (310, 70))
+    window.blit(health_text, (310, 80))
     
     # Munição (movida para a direita)
     ammo_label = font_medium.render("BALAS", True, (255, 255, 255))
-    window.blit(ammo_label, (900, 65))
-    draw_health_bar(window, 1020, 70, 200, 25, bow_left.ammo, bow_left.max_ammo, 
+    window.blit(ammo_label, (900, 75))
+    draw_health_bar(window, 1020, 80, 200, 25, bow_left.ammo, bow_left.max_ammo, 
                    (255, 215, 0) if bow_left.ammo > 10 else (255, 50, 50))
     ammo_text = font_small.render(f"{bow_left.ammo}/{bow_left.max_ammo}", True, (255, 255, 255))
-    window.blit(ammo_text, (1230, 70))
+    window.blit(ammo_text, (1230, 80))
     
     # Status de Stun - embaixo do score
     if player_obj.stun_timer > 0:
