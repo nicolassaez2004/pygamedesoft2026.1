@@ -1,8 +1,47 @@
 import pygame
 import math
 
+#animações jogador parado
+player_parado_nada = pygame.image.load('jogador/player-parado-nada.png') #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
+player_parado_espada = pygame.image.load('jogador/player-parado-espada.png')
+player_parado_arco = pygame.image.load('jogador/player-parado-arco.png')
+player_parado_espada_arco = pygame.image.load('jogador/player-parado-espada-arco.png')
+
+#animações jogador caminhando
+player_andas_nada = pygame.image.load('jogador/player-andas-nada.png') #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
+player_andas_espada = pygame.image.load('jogador/player-andas-espada.png')
+player_andas_arco = pygame.image.load('jogador/player-andas-arco.png')
+player_andas_espada_arco = pygame.image.load('jogador/player-parado-espada-arco.png')
+
+#animações jogador golpeando
+
+player_golpe_nada = pygame.image.load('jogador/player-golpe-nada.png') #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
+player_golpe_espada = pygame.image.load('jogador/player-golpe-espada.png')
+player_golpe_arco = pygame.image.load('jogador/player-golpe-arco.png')
+player_golpe_espada_arco = pygame.image.load('jogador/player-parado-espada-arco.png')
+
+assets = {}
+
+#animações jogador parado
+assets['player_parado_nada'] = player_parado_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
+assets['player_parado_espada'] = player_parado_espada
+assets['player_parado_arco'] = player_parado_arco
+assets['player_parado_espada_arco'] = player_parado_espada_arco
+
+#animações jogador caminhando
+assets['player_andas_nada'] = player_andas_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
+assets['player_andas_espada'] = player_andas_espada
+assets['player_andas_arco'] = player_andas_arco
+assets['player_andas_espada_arco'] = player_andas_espada_arco
+
+#animações jogador golpeando
+assets['player_golpe_nada'] = player_golpe_nada #player sem item na mão (não consegue atirar e seu golpe dá apenas 1 de dano)
+assets['player_golpe_espada'] = player_golpe_espada
+assets['player_golpe_arco'] = player_golpe_arco
+assets['player_golpe_espada_arco'] = player_golpe_espada_arco
+
 class Player:
-    """Classe que representa o jogador com animações de spritesheet"""
+    """Classe que representa o jogador com animações baseadas em assets"""
     
     def __init__(self, x, y, window_width, window_height):
         self.pos = pygame.Vector2(x, y)
@@ -17,15 +56,24 @@ class Player:
         # Estado da animação
         self.state = "idle"  # idle, walk, attack, hurt, death
         self.facing_direction = pygame.Vector2(1, 0)
-        self.animation_frame = 0
-        self.animation_timer = 0
-        self.animation_speed = 8  # frames por segundo (ataque mais rápido)
+        self.animation_frame = 0  # Frame atual da animação
+        self.animation_timer = 0  # Timer para controlar velocidade da animação
+        self.animation_speed = 8  # frames por segundo
         
-        # Carregar spritesheets
-        self.spritesheets = {}
-        self.animation_frames = {}  # Armazena frames extraídos dos spritesheets
+        # Sistema de armas (começa sem armas)
+        self.weapon = "nada"  # nada, espada, arco, espada_arco
+        self.melee_damage = 1  # Dano padrão sem armas
+        
+        # Armazena frames de cada estado
+        self.animation_frames = {}  # Chave: estado, valor: lista de frames
+        
+        # Carregar sprites como assets
         self._load_sprites()
-        self.current_sprite = self.animation_frames["idle"][0] if "idle" in self.animation_frames else None
+        # Tenta usar o primeiro frame de idle, ou fallback
+        if "idle" in self.animation_frames and len(self.animation_frames["idle"]) > 0:
+            self.current_sprite = self.animation_frames["idle"][0]
+        else:
+            self.current_sprite = self._get_sprite_for_state("idle")
         
         # Dano temporário
         self.hurt_timer = 0
@@ -41,54 +89,130 @@ class Player:
         self.melee_spawned = False  # Controle para gerar hitbox apenas no timing
     
     def _load_sprites(self):
-        """Carrega todos os spritesheets do jogador"""
-        # Cada spritesheet tem uma quantidade diferente de frames
-        sprite_info = {
-            "idle": ("jogador/IDLE.png", 7, 96),      # 7 frames, 96px cada
-            "walk": ("jogador/WALK.png", 8, 96),      # 8 frames, 96px cada
-            "attack1": ("jogador/ATTACK 1.png", 6, 96),  # 6 frames, 96px cada
-            "hurt": ("jogador/HURT.png", 4, 96),      # 4 frames, 96px cada
-            "death": ("jogador/DEATH.png", 12, 96)     # 12 frames, 96px cada
+        """Carrega os sprites dos assets como spritesheets e divide em frames"""
+        # Dicionário que mapeia asset_key para (num_frames esperados)
+        # Se a spritesheet tem 2 colunas e 2 linhas, são 4 frames, etc.
+        frame_configs = {
+            'player_parado_nada': None,      # Auto-detectar
+            'player_parado_espada': None,
+            'player_parado_arco': None,
+            'player_parado_espada_arco': None,
+            'player_andas_nada': None,
+            'player_andas_espada': None,
+            'player_andas_arco': None,
+            'player_andas_espada_arco': None,
+            'player_golpe_nada': None,
+            'player_golpe_espada': None,
+            'player_golpe_arco': None,
+            'player_golpe_espada_arco': None,
         }
         
-        try:
-            for state, (path, num_frames, frame_width) in sprite_info.items():
-                spritesheet = pygame.image.load(path)
-                self.spritesheets[state] = spritesheet
+        # Carrega e divide cada asset em frames
+        for asset_key in frame_configs:
+            if asset_key not in assets:
+                print(f"Aviso: Asset '{asset_key}' não encontrado")
+                continue
+            
+            try:
+                spritesheet = assets[asset_key].copy()
+                width = spritesheet.get_width()
+                height = spritesheet.get_height()
                 
-                # Extrai frames do spritesheet
+                # Frame size é 32x32 pixels
+                frame_size = 32
+                
+                # Calcula quantos frames há na spritesheet
+                frames_per_row = width // frame_size
+                frames_per_col = height // frame_size
+                total_frames = frames_per_row * frames_per_col
+                
+                print(f"Carregando '{asset_key}': {width}x{height}, "
+                      f"{frames_per_row}x{frames_per_col} = {total_frames} frames")
+                
                 frames = []
-                sheet_height = spritesheet.get_height()
                 
-                for i in range(num_frames):
-                    x = i * frame_width
-                    # Cria um subsurface (referência, não cópia)
-                    try:
-                        frame = spritesheet.subsurface(
-                            pygame.Rect(x, 0, frame_width, sheet_height)
-                        )
-                        # Faz uma cópia para garantir que funcione
-                        frame = frame.copy()
-                        # Redimensiona para tamanho apropriado (225x225 = 150×1.5)
-                        frame = pygame.transform.scale(frame, (225, 225))
-                        frames.append(frame)
-                    except ValueError as e:
-                        print(f"Erro ao extrair frame {i} de {state}: {e}")
-                        # Cria frame padrão
-                        dummy = pygame.Surface((225, 225))
-                        dummy.fill((0, 255, 0))
-                        frames.append(dummy)
+                # Percorre de cima para baixo, esquerda para direita
+                for row in range(frames_per_col):
+                    for col in range(frames_per_row):
+                        x = col * frame_size
+                        y = row * frame_size
+                        
+                        # Extrai o frame (subsurface)
+                        try:
+                            frame = spritesheet.subsurface(
+                                pygame.Rect(x, y, frame_size, frame_size)
+                            )
+                            # Copia para evitar problemas com subsurfaces
+                            frame = frame.copy()
+                            # Redimensiona para 225x225
+                            frame = pygame.transform.scale(frame, (225, 225))
+                            frames.append(frame)
+                        except ValueError as e:
+                            print(f"  Erro ao extrair frame ({col}, {row}): {e}")
                 
-                self.animation_frames[state] = frames
+                # Armazena os frames nomeados por estado + arma
+                if asset_key.startswith('player_parado'):
+                    state_key = 'idle'
+                elif asset_key.startswith('player_andas'):
+                    state_key = 'walk'
+                elif asset_key.startswith('player_golpe'):
+                    state_key = 'attack1'
+                else:
+                    state_key = 'idle'
                 
-        except Exception as e:
-            print(f"Erro ao carregar sprites: {e}")
-            # Se não conseguir carregar, cria sprites padrão
-            dummy_surface = pygame.Surface((150, 150))
-            dummy_surface.fill((0, 255, 0))
-            sprite_info_keys = ["idle", "walk", "attack1", "hurt", "death"]
-            for state in sprite_info_keys:
-                self.animation_frames[state] = [dummy_surface]
+                # Cria chave composta: estado + arma
+                composite_key = (state_key, self.weapon)
+                
+                # Também armazena com chave simples (fallback para idle/walk/attack1 genérico)
+                if state_key not in self.animation_frames or len(self.animation_frames[state_key]) < len(frames):
+                    self.animation_frames[state_key] = frames
+                    print(f"  ✓ {state_key} carregado com {len(frames)} frames")
+                    
+            except Exception as e:
+                print(f"Erro ao processar '{asset_key}': {e}")
+    
+    def _get_sprite_for_state(self, state):
+        """Retorna o sprite apropriado para um estado e arma atuais"""
+        weapon_suffix = self.weapon
+        state_prefix = ""
+        
+        if state == "idle":
+            state_prefix = "player_parado"
+        elif state == "walk":
+            state_prefix = "player_andas"
+        elif state == "attack1":
+            state_prefix = "player_golpe"
+        else:
+            # Para hurt e death, tentar carregar de assets ou usar padrão
+            asset_key = f"{state}_{self.weapon}"
+            if asset_key in assets:
+                img = assets[asset_key].copy()
+                img = pygame.transform.scale(img, (225, 225))
+                return img
+            # Fallback
+            dummy = pygame.Surface((225, 225))
+            dummy.fill((100, 100, 100))
+            return dummy
+        
+        # Constrói a chave do asset baseado em estado + arma
+        asset_key = f"{state_prefix}_{weapon_suffix}"
+        
+        if asset_key in assets:
+            img = assets[asset_key].copy()
+            img = pygame.transform.scale(img, (225, 225))
+            return img
+        
+        # Se não encontrar, tenta sem arma
+        asset_key_fallback = f"{state_prefix}_nada"
+        if asset_key_fallback in assets:
+            img = assets[asset_key_fallback].copy()
+            img = pygame.transform.scale(img, (225, 225))
+            return img
+        
+        # Fallback final
+        dummy = pygame.Surface((225, 225))
+        dummy.fill((100, 100, 100))
+        return dummy
     
     def update(self, dt, keys, mouse_buttons):
         """Atualiza o estado do jogador"""
@@ -130,7 +254,7 @@ class Player:
             self.trigger_attack()
         
         # Determina o estado de animação (ordem de prioridade)
-        # 1. Ataque tem prioridade máxima (usa spritesheet "attack1")
+        # 1. Ataque tem prioridade máxima
         if self.attack_timer > 0:
             self.state = "attack1"
         # 2. Dano (mas pode andar)
@@ -149,7 +273,7 @@ class Player:
         if direction.length() > 0:
             self.facing_direction = direction.normalize()
         
-        # Atualiza animação
+        # Atualiza animação de frames
         self.animation_timer += dt
         frame_duration = 1.0 / self.animation_speed
         
@@ -167,6 +291,9 @@ class Player:
         if self.state in self.animation_frames:
             frame_idx = min(self.animation_frame, len(self.animation_frames[self.state]) - 1)
             self.current_sprite = self.animation_frames[self.state][frame_idx]
+        else:
+            # Fallback se não houver frames carregados
+            self.current_sprite = self._get_sprite_for_state(self.state)
         
         # Mantém o player dentro da tela
         self.pos.x = max(self.radius, min(self.pos.x, self.window_width - self.radius))
@@ -231,10 +358,24 @@ class Player:
         """Inicia o ataque melee"""
         if self.attack_timer <= 0:  # Só permite novo ataque se não estiver em ataque
             self.attack_timer = self.attack_duration
-            self.animation_frame = 0  # Reinicia a animação
             self.melee_spawned = False
             return True
         return False
+    
+    def set_weapon(self, weapon_type):
+        """Define o tipo de arma do jogador (nada, espada, arco, espada_arco)"""
+        if weapon_type in ["nada", "espada", "arco", "espada_arco"]:
+            self.weapon = weapon_type
+            # Ajusta dano do ataque baseado na arma
+            if weapon_type == "nada":
+                # Sem arma, dano mais baixo
+                self.melee_damage = 1
+            elif weapon_type == "espada":
+                self.melee_damage = 3
+            elif weapon_type == "arco":
+                self.melee_damage = 1  # Arco é para disparar, não para melee
+            elif weapon_type == "espada_arco":
+                self.melee_damage = 2
     
     def get_melee_attack(self):
         """Retorna um ataque melee se estiver ativo (apenas uma vez por ataque)"""
@@ -242,11 +383,12 @@ class Player:
         if self.attack_timer > 0:
             # attack_timer começa em attack_duration e diminui
             elapsed_time = self.attack_duration - self.attack_timer
-            # A animação attack1 tem 6 frames; últimos 3 frames são a segunda metade
-            damage_start = 0.5 * self.attack_duration  # a partir do frame 3 (de 6)
+            # Ataque ocorre na segunda metade da animação
+            damage_start = 0.5 * self.attack_duration
             if not self.melee_spawned and elapsed_time >= damage_start:
                 self.melee_spawned = True
-                return MeleeAttack(self.pos, self.facing_direction, damage=2)
+                damage = getattr(self, 'melee_damage', 1)
+                return MeleeAttack(self.pos, self.facing_direction, damage=damage)
         return None
     
     def draw(self, window):

@@ -9,27 +9,50 @@ def inicializa(window_width=1280, window_height=720):
     plataforma = pygame.image.load('sprite/mapa.jpg')
     plataforma = pygame.transform.scale(plataforma, (480, 400))
 
-    player = pygame.image.load('sprite/player.jpg')
-    player = pygame.transform.scale(player, (80, 80))
     wizard = pygame.image.load('Sprites/MageMicoz.png')
     wizard = pygame.transform.scale(wizard, (80, 80))
     skeleton = pygame.image.load('Sprites/Skellington_gerson.png')
     skeleton = pygame.transform.scale(skeleton, (80, 80))
-    knight = pygame.image.load('sprite/knight.jpg')
-    knight = pygame.transform.scale(knight, (80, 80))
-    bausprite = pygame.image.load('sprite/bausprite.png')
-    bausprite = pygame.transform.scale(bausprite, (80, 80))
-    kitmedico = pygame.image.load('sprite/kitmedicosprite.png')
-    kitmedico = pygame.transform.scale(kitmedico, (80, 80))
-    arco = pygame.image.load('sprite/arco.png')
-    arco = pygame.transform.scale(arco, (80, 80))
-    espadasprite = pygame.image.load('sprite/espadasprite.png')
-    espadasprite = pygame.transform.scale(espadasprite, (80, 80))
+    
+    # Carrega assets opcionais com fallback
+    try:
+        knight = pygame.image.load('sprite/knight.jpg')
+        knight = pygame.transform.scale(knight, (80, 80))
+    except:
+        knight = pygame.Surface((80, 80))
+        knight.fill((150, 150, 150))
+    
+    try:
+        bausprite = pygame.image.load('sprite/bausprite.png')
+        bausprite = pygame.transform.scale(bausprite, (80, 80))
+    except:
+        bausprite = pygame.Surface((80, 80))
+        bausprite.fill((200, 100, 100))
+    
+    try:
+        kitmedico = pygame.image.load('sprite/kitmedicosprite.png')
+        kitmedico = pygame.transform.scale(kitmedico, (80, 80))
+    except:
+        kitmedico = pygame.Surface((80, 80))
+        kitmedico.fill((100, 200, 100))
+    
+    try:
+        arco = pygame.image.load('sprite/arco.png')
+        arco = pygame.transform.scale(arco, (80, 80))
+    except:
+        arco = pygame.Surface((80, 80))
+        arco.fill((200, 200, 100))
+    
+    try:
+        espadasprite = pygame.image.load('sprite/espadasprite.png')
+        espadasprite = pygame.transform.scale(espadasprite, (80, 80))
+    except:
+        espadasprite = pygame.Surface((80, 80))
+        espadasprite.fill((200, 150, 100))
 
     assets = {}
     assets['bg'] = bg
     assets['plataforma'] = plataforma
-    assets['player'] = player
     assets['wizard'] = wizard
     assets['skeleton'] = skeleton
     assets['knight'] = knight
@@ -74,6 +97,7 @@ def gameplay_loop(window, clock):
     
     # Inicializa o arco do player (ataque direito - bola amarela)
     bow_left = projectile.Bow(player_obj.pos, max_ammo=30)  # Bola amarela
+    bow_left.ammo = 0  # Começa sem flechas
     
     # Inicia transição de música (fade out do menu, fade in da gameplay)
     pygame.mixer.music.fadeout(1000)  # Fade out de 1 segundo
@@ -305,7 +329,24 @@ def gameplay_loop(window, clock):
 
             espadasprite_rect = assets['espadasprite'].get_rect(topleft=(760, 440))
             if espadasprite_rect.colliderect(player_rect):
-                pass
+                # Verifica se tem uma espada
+                has_sword = player_obj.weapon in ['espada', 'espada_arco']
+                if not has_sword:
+                    prompt_text = f'Pressione "E" para comprar Espada (5$)'
+                    if money >= 5:
+                        prompt_color = (100, 255, 100)  # Verde
+                    else:
+                        prompt_color = (255, 100, 100)  # Vermelho
+                    prompt_surface = font_prompt.render(prompt_text, True, prompt_color)
+                    prompt_x = 640 - prompt_surface.get_width() // 2
+                    window.blit(prompt_surface, (prompt_x, 600))
+                    
+                    # Verifica se pressionou E para comprar
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_e] and money >= 5 and purchase_cooldown <= 0:
+                        money -= 5
+                        player_obj.set_weapon('espada')
+                        purchase_cooldown = purchase_cooldown_duration
 
             # Verifica colisão com inimigos (dano no jogador)
             collision_result = enemy_manager.check_collisions_with_player(player_obj.pos, player_obj.radius)
@@ -463,7 +504,7 @@ def draw_hud(window, score, player_obj, bow_left, enemy_manager, time, elapsed_t
     window.blit(health_text, (310, 80))
     
     # Munição (movida para a direita)
-    ammo_label = font_medium.render("BALAS", True, (255, 255, 255))
+    ammo_label = font_medium.render("FLECHAS", True, (255, 255, 255))
     window.blit(ammo_label, (900, 75))
     draw_health_bar(window, 1020, 80, 200, 25, bow_left.ammo, bow_left.max_ammo, 
                    (255, 215, 0) if bow_left.ammo > 10 else (255, 50, 50))
