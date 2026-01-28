@@ -115,7 +115,7 @@ class Bow:
                 speed=500,
                 color=(255, 255, 0),
                 radius=5,
-                damage=1
+                damage=10
             )
             self.projectiles.append(projectile)
             self.ammo -= 1

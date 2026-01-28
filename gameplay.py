@@ -65,6 +65,7 @@ def inicializa(window_width=1280, window_height=720):
     try:
         assets['som_flecha_acerto'] = pygame.mixer.Sound('sons/FlechaAcertando.mp3')
         assets['som_attack1'] = pygame.mixer.Sound('sons/Attack1Espada.mp3')
+        assets['som_soco'] = pygame.mixer.Sound('sons/soco.mp3')
         assets['som_stun'] = pygame.mixer.Sound('sons/StunGeloIce.mp3')
         assets['som_dano'] = pygame.mixer.Sound('sons/TomouDanoPerdeuVida.mp3')
         assets['som_fantasma_morre'] = pygame.mixer.Sound('sons/fantasmamorrendo.mp3')
@@ -74,6 +75,7 @@ def inicializa(window_width=1280, window_height=720):
         # Cria sons vazios para evitar erros se os arquivos não existirem
         assets['som_flecha_acerto'] = None
         assets['som_attack1'] = None
+        assets['som_soco'] = None
         assets['som_stun'] = None
         assets['som_dano'] = None
         assets['som_fantasma_morre'] = None
@@ -143,6 +145,9 @@ def gameplay_loop(window, clock):
     
     # Transição de música
     music_transition_time = 0
+    
+    # Custo do kit médico (começa em 2 e dobra a cada compra)
+    kitmedico_cost = 2
 
     while True:
         for event in pygame.event.get():
@@ -244,9 +249,15 @@ def gameplay_loop(window, clock):
             attack_melee = player_obj.get_melee_attack()
             if attack_melee:
                 current_melee_attack = attack_melee
-                # Toca som de ataque
-                if assets['som_attack1']:
-                    assets['som_attack1'].play()
+                # Toca som de ataque baseado na arma do jogador
+                if player_obj.weapon in ['nada', 'arco']:
+                    # Player sem arma ou só com arco: som de soco
+                    if assets['som_soco']:
+                        assets['som_soco'].play()
+                elif player_obj.weapon in ['espada', 'espada_arco']:
+                    # Player com espada ou espada+arco: som de espada
+                    if assets['som_attack1']:
+                        assets['som_attack1'].play()
             
             # Ataque direito (bola amarela - como o arco)
             attack_cooldown_right -= dt
@@ -298,9 +309,8 @@ def gameplay_loop(window, clock):
             near_kitmedico = False
             near_espadasprite = False
             near_arco = False
-            bausprite_cost = 2  # Custo para comprar munição
-            munition_recovery = 3  # Munição recuperada por compra
-            kitmedico_cost = 20  # Custo para usar o kit médico
+            bausprite_cost = 5  # Custo para comprar munição
+            munition_recovery = 10  # Munição recuperada por compra
             kitmedico_recovery = 1  # Vida recuperada (sempre 1)
             espadasprite_cost = 4  # Preço da espada atualizado
             arco_cost = 6  # Preço do arco
@@ -334,6 +344,7 @@ def gameplay_loop(window, clock):
                 if keys[pygame.K_e] and player_obj.health < player_obj.max_health and money >= kitmedico_cost and purchase_cooldown <= 0:
                     money -= kitmedico_cost
                     player_obj.health = min(player_obj.health + kitmedico_recovery, player_obj.max_health)
+                    kitmedico_cost *= 2  # Dobra o custo para a próxima compra
                     purchase_cooldown = purchase_cooldown_duration  # Ativa cooldown
             arco_rect = assets['arco'].get_rect(topleft=(440, 440))
             if arco_rect.colliderect(player_rect):
@@ -343,7 +354,11 @@ def gameplay_loop(window, clock):
                     keys = pygame.key.get_pressed()
                     if keys[pygame.K_e] and money >= arco_cost and purchase_cooldown <= 0:
                         money -= arco_cost
-                        player_obj.set_weapon('arco')
+                        # Se já tem espada, combina para espada_arco
+                        if player_obj.weapon == 'espada':
+                            player_obj.set_weapon('espada_arco')
+                        else:
+                            player_obj.set_weapon('arco')
                         purchase_cooldown = purchase_cooldown_duration
 
             espadasprite_rect = assets['espadasprite'].get_rect(topleft=(760, 440))
@@ -356,7 +371,11 @@ def gameplay_loop(window, clock):
                     keys = pygame.key.get_pressed()
                     if keys[pygame.K_e] and money >= espadasprite_cost and purchase_cooldown <= 0:
                         money -= espadasprite_cost
-                        player_obj.set_weapon('espada')
+                        # Se já tem arco, combina para espada_arco
+                        if player_obj.weapon == 'arco':
+                            player_obj.set_weapon('espada_arco')
+                        else:
+                            player_obj.set_weapon('espada')
                         purchase_cooldown = purchase_cooldown_duration
 
             # Verifica colisão com inimigos (dano no jogador)

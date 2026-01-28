@@ -20,6 +20,9 @@ player_golpe_espada = pygame.image.load('jogador/player-golpe-espada.png')
 player_golpe_arco = pygame.image.load('jogador/player-golpe-arco.png')
 player_golpe_espada_arco = pygame.image.load('jogador/player-golpe-espada-arco.png')
 
+#animação jogador tomando dano
+player_damage = pygame.image.load('jogador/damage.png')
+
 assets = {}
 
 #animações jogador parado
@@ -40,6 +43,9 @@ assets['player_golpe_espada'] = player_golpe_espada #player com somente espada n
 assets['player_golpe_arco'] = player_golpe_arco #player com somente arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá apenas 4 de dano)
 assets['player_golpe_espada_arco'] = player_golpe_espada_arco #player com espada e arco na mão (consegue atirar caso tenha flechas > 0, seu golpe dá 10 de dano)
 
+#animação jogador tomando dano
+assets['player_damage'] = player_damage
+
 class Player:
     """Classe que representa o jogador com animações baseadas em assets"""
     
@@ -49,8 +55,8 @@ class Player:
         self.window_height = window_height
         self.radius = 40
         self.speed = 300
-        self.max_health = 5
-        self.health = 5
+        self.max_health = 10
+        self.health = 10
         self.game_over = False
         
         # Estado da animação
@@ -192,7 +198,13 @@ class Player:
         elif state == "attack1":
             state_prefix = "player_golpe"
         else:
-            # Para hurt e death, tentar carregar de assets ou usar padrão
+            # Para hurt, usar sprite específico de dano
+            if state == "hurt":
+                if 'player_damage' in assets:
+                    img = assets['player_damage'].copy()
+                    img = pygame.transform.scale(img, (80, 80))
+                    return img
+            # Para death, tentar carregar de assets ou usar padrão
             asset_key = f"{state}_{self.weapon}"
             if asset_key in assets:
                 img = assets[asset_key].copy()
