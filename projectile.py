@@ -27,14 +27,24 @@ class Projectile:
         self.pos += self.velocity * dt
     
     def draw(self, window):
-        """Desenha o projétil (sprite se existir, círculo se não)"""
+        """Desenha o projétil com efeitos visuais melhorados"""
         if self.image is not None:
             angle = -math.degrees(math.atan2(self.velocity.y, self.velocity.x)) if self.velocity.length() > 0 else 0
             rotated = pygame.transform.rotate(self.image, angle)
             rect = rotated.get_rect(center=(self.pos.x, self.pos.y))
             window.blit(rotated, rect)
         else:
+            # Efeito de brilho (círculos concêntricos)
+            for i in range(3):
+                alpha_value = 255 - (i * 80)
+                radius = self.radius + i * 2
+                glow_color = tuple(max(0, min(255, c - i * 50)) for c in self.color)
+                pygame.draw.circle(window, glow_color, self.pos, radius)
+            
+            # Círculo principal
             pygame.draw.circle(window, self.color, self.pos, self.radius)
+            # Brilho central
+            pygame.draw.circle(window, (255, 255, 255), self.pos, max(1, self.radius // 2))
     
     def is_out_of_bounds(self, window_width, window_height, margin=50):
         """Verifica se o projétil saiu da tela"""

@@ -261,23 +261,6 @@ class Player:
         
         player_rect = sprite_to_draw.get_rect(center=(int(self.pos.x), int(self.pos.y)))
         window.blit(sprite_to_draw, player_rect)
-        
-        # Desenha barra de vida
-        bar_width = 60
-        bar_height = 8
-        bar_x = int(self.pos.x) - bar_width // 2
-        bar_y = int(self.pos.y) - 50
-        
-        # Fundo da barra (vermelho)
-        pygame.draw.rect(window, (255, 0, 0), (bar_x, bar_y, bar_width, bar_height))
-        
-        
-        # Barra de vida (verde)
-        health_percentage = max(0, self.health / self.max_health)
-        pygame.draw.rect(window, (0, 255, 0), (bar_x, bar_y, bar_width * health_percentage, bar_height))
-        
-        # Borda da barra
-        pygame.draw.rect(window, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 1)
 
 
 class MeleeAttack:
