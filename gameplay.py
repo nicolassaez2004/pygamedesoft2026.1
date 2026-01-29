@@ -106,7 +106,7 @@ def inicializa(window_width=1280, window_height=720):
 
     return assets
 
-def gameplay_loop(window, clock):
+def gameplay_loop(window, clock, player_name="Jogador"):
     # Carrega os assets
     assets = inicializa(window.get_width(), window.get_height())
     
@@ -142,7 +142,7 @@ def gameplay_loop(window, clock):
         final_volume = 0.22
 
     score = 0
-    money = 50  # Sistema de dinheiro (começa com 50 para testes)
+    money = 0  # Sistema de dinheiro (começa com 0)
     elapsed_time = 0  # Cronômetro de tempo decorrido no jogo
     dt = 0
     attack_cooldown_right = 0
@@ -186,7 +186,7 @@ def gameplay_loop(window, clock):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return "quit"
+                return "quit", score
 
             if event.type == pygame.KEYDOWN:
                 # Pula o tutorial ao pressionar ESPAÇO
@@ -195,7 +195,7 @@ def gameplay_loop(window, clock):
                     
                 if event.key == pygame.K_ESCAPE:
                     if player_obj.game_over:
-                        return "leaderboard"
+                        return "leaderboard", score
                     else:
                         paused = not paused  # Toggle pause
                 if event.key == pygame.K_p:
@@ -308,7 +308,7 @@ def gameplay_loop(window, clock):
             # Atualiza arco
             bow_left.update(dt, player_obj.pos)
             
-            # Atualiza inimigos (ISSO ESTAVA FALTANDO!)
+            # Atualiza inimigos 
             enemy_manager.update(dt, player_obj.pos, elapsed_time)
             
             # Verifica colisão de ataque melee com inimigos

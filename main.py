@@ -11,16 +11,21 @@ def main():
     clock = pygame.time.Clock()
 
     estado = "menu"
+    player_name = ""
+    final_score = 0
 
     while estado != "quit":
         if estado == "menu":
             estado = menu.menu_loop(window, clock)
 
+        elif estado == "input_name":
+            estado, player_name = menu.input_name_screen(window, clock)
+
         elif estado == "gameplay":
-            estado = gameplay.gameplay_loop(window, clock)
+            estado, final_score = gameplay.gameplay_loop(window, clock, player_name)
 
         elif estado == "leaderboard":
-            estado = leaderboard.leaderboard_loop(window, clock)
+            estado = leaderboard.leaderboard_loop(window, clock, player_name, final_score)
 
     pygame.quit()
 

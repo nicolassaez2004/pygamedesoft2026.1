@@ -97,6 +97,10 @@ class GhostersonEnemy(Enemy):
         
         super().__init__(x, y, sprite, adjusted_speed, radius)
         
+        # Ghosterson começa com apenas 1 de vida
+        self.health = 1
+        self.max_health = 1
+        
         # Ajusta o radius baseado no scale_factor
         if radius is None:
             self.radius = int((sprite.get_width() // 2) * scale_factor)

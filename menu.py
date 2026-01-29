@@ -1,6 +1,151 @@
 import pygame
 import math
 
+def input_name_screen(window, clock):
+    """Tela para o jogador inserir seu nome antes de começar o jogo"""
+    
+    # Carrega e toca a música do menu se não estiver tocando
+    try:
+        if not pygame.mixer.music.get_busy():
+            pygame.mixer.music.load('sons/menu.mp3')
+            pygame.mixer.music.play(-1)
+            pygame.mixer.music.set_volume(0.22)
+    except Exception as e:
+        print(f"Aviso: Não foi possível carregar a música do menu: {e}")
+    
+    # Fontes
+    font_title = pygame.font.SysFont('Arial', 70, bold=True)
+    font_text = pygame.font.SysFont('Arial', 40)
+    font_input = pygame.font.SysFont('Arial', 50)
+    font_button = pygame.font.SysFont('Arial', 45)
+    
+    player_name = ""
+    max_name_length = 15
+    cursor_visible = True
+    cursor_timer = 0
+    cursor_blink_speed = 0.5  # segundos
+    time = 0
+    
+    while True:
+        dt = clock.tick(60) / 1000.0
+        time += dt
+        cursor_timer += dt
+        
+        # Pisca o cursor
+        if cursor_timer >= cursor_blink_speed:
+            cursor_visible = not cursor_visible
+            cursor_timer = 0
+        
+        mouse_clicked = False
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "quit", ""
+            
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return "menu", ""
+                
+                elif event.key == pygame.K_RETURN:
+                    # Se o nome não estiver vazio, continua para o jogo
+                    if player_name.strip():
+                        return "gameplay", player_name.strip()
+                
+                elif event.key == pygame.K_BACKSPACE:
+                    player_name = player_name[:-1]
+                
+                else:
+                    # Adiciona caractere se for letra, número ou espaço
+                    if len(player_name) < max_name_length:
+                        if event.unicode.isprintable():
+                            player_name += event.unicode
+            
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mouse_clicked = True
+        
+        # Background com gradiente
+        draw_gradient_rect(window, (20, 20, 40), (60, 20, 80), pygame.Rect(0, 0, 1280, 720))
+        
+        # Efeito de partículas no fundo
+        for i in range(30):
+            x = (100 + i * 40 + math.sin(time + i) * 50) % 1280
+            y = (100 + i * 20 + math.cos(time + i * 0.5) * 30) % 720
+            alpha = int(100 + 100 * math.sin(time + i))
+            size = 2 + int(2 * math.sin(time + i))
+            color = (100 + alpha // 2, 50 + alpha // 3, 150 + alpha // 2)
+            pygame.draw.circle(window, color, (int(x), int(y)), size)
+        
+        # Título
+        title_offset = math.sin(time) * 5
+        title = font_title.render("DIGITE SEU NOME", True, (255, 215, 0))
+        title_shadow = font_title.render("DIGITE SEU NOME", True, (0, 0, 0))
+        window.blit(title_shadow, (640 - title.get_width() // 2 + 3, 120 + title_offset + 3))
+        window.blit(title, (640 - title.get_width() // 2, 120 + title_offset))
+        
+        # Caixa de entrada
+        input_box_rect = pygame.Rect(340, 300, 600, 80)
+        
+        # Fundo da caixa com transparência
+        box_surface = pygame.Surface((input_box_rect.width, input_box_rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(box_surface, (50, 30, 80, 180), box_surface.get_rect(), border_radius=10)
+        window.blit(box_surface, (input_box_rect.x, input_box_rect.y))
+        
+        # Borda da caixa
+        pygame.draw.rect(window, (255, 215, 0), input_box_rect, 3, border_radius=10)
+        
+        # Texto digitado
+        display_text = player_name
+        if cursor_visible:
+            display_text += "|"
+        
+        text_surface = font_input.render(display_text, True, (255, 255, 255))
+        text_x = input_box_rect.centerx - text_surface.get_width() // 2
+        text_y = input_box_rect.centery - text_surface.get_height() // 2
+        window.blit(text_surface, (text_x, text_y))
+        
+        # Instruções
+        instruction1 = font_text.render(f"Máximo {max_name_length} caracteres", True, (180, 180, 200))
+        window.blit(instruction1, (640 - instruction1.get_width() // 2, 420))
+        
+        # Botão "Continuar" (só aparece se tiver nome)
+        if player_name.strip():
+            button_rect = pygame.Rect(490, 520, 300, 70)
+            is_hovered = button_rect.collidepoint(mouse_pos)
+            
+            # Cor do botão
+            button_color = (120, 70, 180, 200) if is_hovered else (100, 50, 150, 180)
+            border_color = (255, 215, 0)
+            
+            # Fundo do botão
+            button_surface = pygame.Surface((button_rect.width, button_rect.height), pygame.SRCALPHA)
+            pygame.draw.rect(button_surface, button_color, button_surface.get_rect(), border_radius=10)
+            window.blit(button_surface, (button_rect.x, button_rect.y))
+            
+            # Borda do botão
+            pygame.draw.rect(window, border_color, button_rect, 3, border_radius=10)
+            
+            # Texto do botão
+            button_text = font_button.render("CONTINUAR", True, (255, 215, 0))
+            button_text_x = button_rect.centerx - button_text.get_width() // 2
+            button_text_y = button_rect.centery - button_text.get_height() // 2
+            window.blit(button_text, (button_text_x, button_text_y))
+            
+            # Verifica clique no botão
+            if mouse_clicked and button_rect.collidepoint(mouse_pos):
+                return "gameplay", player_name.strip()
+        
+        # Instrução para pressionar ENTER
+        instruction2_text = "Pressione ENTER para continuar" if player_name.strip() else "Digite seu nome para começar"
+        instruction2 = font_text.render(instruction2_text, True, (150, 150, 170))
+        window.blit(instruction2, (640 - instruction2.get_width() // 2, 630))
+        
+        # Instrução ESC
+        instruction3 = font_text.render("ESC - Voltar ao menu", True, (130, 130, 150))
+        window.blit(instruction3, (640 - instruction3.get_width() // 2, 680))
+        
+        pygame.display.flip()
+
 def draw_gradient_rect(surface, color1, color2, rect):
     """Desenha um retângulo com gradiente vertical"""
     for y in range(rect.height):
@@ -47,7 +192,7 @@ def menu_loop(window, clock):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     if selected_option == 0:
-                        return "gameplay"
+                        return "input_name"
                     elif selected_option == 1:
                         return "quit"
                 if event.key == pygame.K_ESCAPE:
@@ -168,7 +313,7 @@ def menu_loop(window, clock):
             for i, rect in enumerate(button_rects):
                 if rect.collidepoint(mouse_pos):
                     if i == 0:
-                        return "gameplay"
+                        return "input_name"
                     elif i == 1:
                         return "quit"
 
