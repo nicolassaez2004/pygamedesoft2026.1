@@ -65,7 +65,7 @@ O jogo salva automaticamente as 10 melhores pontuações com os nomes dos jogado
 
 ## Vídeo de Demonstração
 
-**[Link do vídeo será adicionado em breve]**
+**(https://youtu.be/wTWySTY5-s0)**
 
 ## Repositório GitHub
 

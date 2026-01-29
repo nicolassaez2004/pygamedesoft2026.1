@@ -3,10 +3,13 @@
     "name": "Levi A.",
     "score": 13900
   },
-
   {
     "name": "Pit",
     "score": 12820
+  },
+  {
+    "name": "John Pygame3",
+    "score": 12510
   },
   {
     "name": "John Pygame",
@@ -16,6 +19,4 @@
     "name": "BrainZ TD",
     "score": 6700
   }
-
-
 ]

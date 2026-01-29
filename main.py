@@ -3,7 +3,6 @@ import menu
 import gameplay
 import leaderboard
 
-#controla as telas (a leaderboard ainda não tem nada)
 def main():
     pygame.init()
     window = pygame.display.set_mode((1280, 720))

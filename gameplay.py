@@ -14,14 +14,6 @@ def inicializa(window_width=1280, window_height=720):
     skeleton = pygame.image.load('Sprites/Skellington_gerson.png')
     skeleton = pygame.transform.scale(skeleton, (80, 80))
     
-    # Carrega assets opcionais com fallback
-    try:
-        knight = pygame.image.load('sprite/knight.jpg')
-        knight = pygame.transform.scale(knight, (80, 80))
-    except:
-        knight = pygame.Surface((80, 80))
-        knight.fill((150, 150, 150))
-    
     try:
         bausprite = pygame.image.load('sprite/bausprite.png')
         bausprite = pygame.transform.scale(bausprite, (80, 80))
@@ -74,7 +66,6 @@ def inicializa(window_width=1280, window_height=720):
     assets['plataforma'] = plataforma
     assets['wizard'] = wizard
     assets['skeleton'] = skeleton
-    assets['knight'] = knight
     assets['bausprite'] = bausprite
     assets['kitmedico'] = kitmedico
     assets['arco'] = arco
@@ -370,7 +361,7 @@ def gameplay_loop(window, clock, player_name="Jogador"):
                     particle_count = 10 if not isinstance(hit_enemy, enemy.GhostersonEnemy) else 8
                     # Cor baseada no tipo de inimigo
                     if isinstance(hit_enemy, enemy.GhostersonEnemy):
-                        base_color = (220, 220, 220)  # Cinza claro/branco para fantasma (osso)
+                        base_color = (220, 220, 220)  # Cinza claro/branco para fantasma (seilakkk)
                     elif isinstance(hit_enemy, enemy.SkellingtonEnemy):
                         base_color = (220, 220, 220)  # Branco para Skellington (osso)
                     else:
@@ -395,7 +386,7 @@ def gameplay_loop(window, clock, player_name="Jogador"):
                     if hit_enemy.take_damage(proj.damage):
                         enemy_manager.remove_enemy(hit_enemy)
                         score += 100
-                        # Ganha 2 dinheiro ao eliminar
+                        # Ganha 2 de dinheiros ao eliminar
                         money += 2
                     # Toca som de acerto
                     if assets['som_flecha_acerto']:
